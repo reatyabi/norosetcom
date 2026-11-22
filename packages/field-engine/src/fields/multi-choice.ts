@@ -1,0 +1,12 @@
+import { multiChoiceValue } from '../values';
+import { defineField } from './shared';
+
+export const multiChoiceField = defineField(multiChoiceValue, {
+  display: {},
+  conditionOps: ['contains', 'is_empty'],
+  // contains: مقدار شرط باید یکی از گزینه‌ها باشد.
+  normalizeConditionValue: (op, value, settings) =>
+    op === 'contains' && typeof value === 'string' && settings.options.some((o) => o.value === value)
+      ? { ok: true, value }
+      : { ok: false, code: 'invalid_condition_value' },
+});

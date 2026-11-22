@@ -1,0 +1,48 @@
+# Postgres و SeaweedFS در production (docs/launch-blueprint.md). پورت‌ها فقط روی loopback‌اند؛
+# Docker از UFW رد می‌شود، پس بستن پورت با firewall کافی نیست. رمز خالی = compose اجرا نمی‌شود.
+name: noroset
+
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: 10m
+    max-file: '3'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: noroset-postgres
+    restart: unless-stopped
+    command: ['postgres', '-c', 'shared_buffers=128MB', '-c', 'max_connections=50']
+    mem_limit: 700m
+    logging: *logging
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:?}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?}
+      POSTGRES_DB: ${POSTGRES_DB:?}
+      NOROSET_MIGRATOR_PASSWORD: ${POSTGRES_MIGRATOR_PASSWORD:?}
+      NOROSET_APP_PASSWORD: ${POSTGRES_APP_PASSWORD:?}
+    ports:
+      - '127.0.0.1:5433:5432'
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - /srv/noroset/shared/initdb/00-roles.sh:/docker-entrypoint-initdb.d/00-roles.sh:ro
+      - /srv/noroset/shared/initdb/roles.sql:/sql/roles.sql:ro
+
+  # s3.json را setup-server.sh از S3_ACCESS_KEY_ID و S3_SECRET_ACCESS_KEY می‌سازد؛ بدون آن S3 دسترسی آزاد دارد.
+  storage:
+    image: chrislusf/seaweedfs:4.48
+    container_name: noroset-storage
+    restart: unless-stopped
+    command: server -dir=/data -s3 -s3.port=8333 -s3.config=/etc/seaweedfs/s3.json -master.volumeSizeLimitMB=256
+    mem_limit: 500m
+    logging: *logging
+    ports:
+      - '127.0.0.1:8333:8333'
+    volumes:
+      - storage_data:/data
+      - /srv/noroset/shared/s3.json:/etc/seaweedfs/s3.json:ro
+
+volumes:
+  postgres_data:
+  storage_data:

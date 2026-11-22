@@ -1,0 +1,33 @@
+/*
+ * اسلایدر خودکار لوگوی استفاده‌کنندگان (customer-logos.tsx)؛ keyframe `mkt-ticker` از marketing.css.
+ * جدا از marketing.css است چون آن فایل ورودی اثر انگشت تصویرهای موکاپ است (lib/marketing-shots.ts).
+ */
+.mkt-logos-track {
+  display: flex;
+  width: max-content;
+  animation: mkt-ticker 32s linear infinite;
+  will-change: transform;
+}
+
+.mkt-logos:hover .mkt-logos-track {
+  animation-play-state: paused;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* بدون حرکت: همه‌ی لوگوها چندسطری و وسط‌چین، نسخه‌ی تکراری پنهان */
+  .mkt-logos-track {
+    animation: none;
+    width: auto;
+    justify-content: center;
+  }
+
+  .mkt-logos-track > ul:first-child {
+    flex-wrap: wrap;
+    justify-content: center;
+    row-gap: 1.5rem;
+  }
+
+  .mkt-logos-copy {
+    display: none !important;
+  }
+}

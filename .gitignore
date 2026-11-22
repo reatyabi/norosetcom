@@ -1,0 +1,32 @@
+# dependencies
+node_modules
+
+# builds
+.next
+out
+dist
+build
+*.tsbuildinfo
+
+# env
+.env
+.env.local
+.env.*.local
+
+# logs
+*.log
+.logs/
+
+# dev.ps1 runtime
+.dev-pids.json
+npm-debug.log*
+pnpm-debug.log*
+
+# misc
+.DS_Store
+.idea
+.vscode
+coverage
+
+# خروجی بیلد release
+.release

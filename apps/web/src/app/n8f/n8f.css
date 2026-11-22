@@ -1,0 +1,231 @@
+/* صفحات عمومی نوروفرم با همان توکن‌ها و کامپوننت‌های دیزاین‌سیستم پلتفرم (`@noroset/ui`) نمایش داده می‌شوند. */
+.n8f-shell,
+.n8f-message {
+  --n8f-bg: var(--background);
+  --n8f-surface: var(--card);
+  --n8f-ink: var(--foreground);
+  --n8f-muted: var(--muted-foreground);
+  --n8f-line: var(--border);
+  --n8f-accent: var(--primary);
+  --n8f-accent-soft: var(--secondary);
+  --n8f-radius: 0.75rem;
+  --n8f-shadow: 0 1px 3px rgb(0 0 0 / 8%);
+  min-height: 100dvh;
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+.n8f-shell {
+  width: min(54rem, 100%);
+  margin-inline: auto;
+  padding: clamp(1rem, 4vw, 2.5rem) clamp(0.75rem, 3vw, 1.5rem);
+}
+
+.n8f-card {
+  overflow: hidden;
+  border: 1px solid var(--n8f-line);
+  border-radius: var(--n8f-radius);
+  background: var(--n8f-surface);
+  box-shadow: var(--n8f-shadow);
+}
+
+.n8f-head {
+  padding: clamp(1.25rem, 4vw, 2.25rem);
+  border-bottom: 1px solid var(--n8f-line);
+  background: linear-gradient(180deg, var(--n8f-accent-soft), transparent);
+}
+
+.n8f-eyebrow {
+  margin: 0;
+  color: var(--n8f-accent);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+
+.n8f-title {
+  margin: 0.35rem 0 0;
+  font-size: clamp(1.35rem, 3.2vw, 1.85rem);
+  font-weight: 700;
+  line-height: 1.5;
+}
+
+.n8f-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 1rem;
+  margin: 0.9rem 0 0;
+  color: var(--n8f-muted);
+  font-size: 0.8rem;
+}
+
+.n8f-fields {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.n8f-field {
+  display: grid;
+  gap: 0.35rem;
+  padding: 1.1rem clamp(1.25rem, 4vw, 2.25rem);
+  border-bottom: 1px solid var(--n8f-line);
+}
+
+.n8f-field:last-child {
+  border-bottom: 0;
+}
+
+.n8f-label {
+  color: var(--n8f-muted);
+  font-size: 0.78rem;
+  font-weight: 500;
+}
+
+.n8f-value {
+  margin: 0;
+  font-size: 0.98rem;
+  line-height: 1.9;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.n8f-value:empty::before,
+.n8f-value[data-empty='true']::before {
+  content: '—';
+  color: var(--n8f-muted);
+}
+
+.n8f-foot {
+  padding: 1rem clamp(1.25rem, 4vw, 2.25rem);
+  border-top: 1px solid var(--n8f-line);
+  background: #fbfaf8;
+  color: var(--n8f-muted);
+  font-size: 0.75rem;
+  line-height: 1.8;
+}
+
+.n8f-message {
+  display: grid;
+  min-height: 100dvh;
+  place-items: center;
+  padding: 1.5rem;
+}
+
+.n8f-message-card {
+  width: min(34rem, 100%);
+  padding: clamp(1.5rem, 5vw, 2.5rem);
+  border: 1px solid var(--n8f-line);
+  border-radius: var(--n8f-radius);
+  background: var(--n8f-surface);
+  box-shadow: var(--n8f-shadow);
+  text-align: center;
+}
+
+.n8f-message-title {
+  margin: 0;
+  font-size: 1.2rem;
+  font-weight: 700;
+}
+
+.n8f-message-text {
+  margin: 0.75rem 0 0;
+  color: var(--n8f-muted);
+  font-size: 0.9rem;
+  line-height: 1.9;
+}
+
+.n8f-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-top: 1.25rem;
+}
+
+.n8f-input {
+  width: 100%;
+  border: 1px solid var(--n8f-line);
+  border-radius: 12px;
+  background: #fff;
+  padding: 0.75rem 0.9rem;
+  color: var(--n8f-ink);
+  font: inherit;
+  font-size: 0.95rem;
+  text-align: center;
+  letter-spacing: 0.08em;
+  outline: none;
+}
+
+.n8f-input:focus {
+  border-color: var(--n8f-accent);
+  box-shadow: 0 0 0 3px rgb(15 92 90 / 14%);
+}
+
+.n8f-button {
+  border: 0;
+  border-radius: 12px;
+  background: var(--n8f-accent);
+  padding: 0.75rem 1rem;
+  color: #fff;
+  font: inherit;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.n8f-button:disabled {
+  opacity: 0.55;
+  cursor: wait;
+}
+
+.n8f-error {
+  margin: 0.85rem 0 0;
+  color: #b42318;
+  font-size: 0.82rem;
+}
+
+.n8f-loading {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  padding: 1.5rem;
+}
+
+.n8f-skeleton {
+  height: 2.4rem;
+  border-radius: 12px;
+  background: linear-gradient(90deg, #f1efeb, #faf9f6, #f1efeb);
+  background-size: 200% 100%;
+  animation: n8f-shimmer 1.2s linear infinite;
+}
+
+.n8f-skeleton-title {
+  height: 4.5rem;
+}
+
+@keyframes n8f-shimmer {
+  to {
+    background-position: -200% 0;
+  }
+}
+
+@media print {
+  .n8f-shell,
+  .n8f-message {
+    background: #fff;
+  }
+
+  .n8f-shell {
+    width: 100%;
+    padding: 0;
+  }
+
+  .n8f-card {
+    border: 0;
+    box-shadow: none;
+  }
+}

@@ -1,0 +1,538 @@
+/* دیزاین سیستم نوروست: shadcn (سبک base-nova) روی Base UI + lucide، با پریست Persian Lab UI `c1rc`
+   (neutral، Vazirmatn برای فارسی و Geist برای لاتین). همه‌ی توکن‌ها، پشته‌ی فونت و ریشه‌های
+   @source اینجاست؛ اپ‌ها فقط همین فایل را import می‌کنند. سند: docs/design-system.md */
+@import 'tailwindcss';
+@import 'tw-animate-css';
+@import 'shadcn/tailwind.css';
+
+@custom-variant dark (&:is(.dark *));
+@source '../../../../apps/web/src/**/*.{ts,tsx}';
+@source '../../../../products/*/ui/**/*.{ts,tsx}';
+@source '../**/*.{ts,tsx}';
+
+/* ارقام: body با ss01 (Vazirmatn) همه‌ی ارقام را فارسی نشان می‌دهد؛ num-en برای ارقام لاتین
+   (موبایل، کد، slug) و num-fa برای فارسی صریح داخل num-en. */
+@utility num-fa {
+  font-feature-settings: 'ss01' on;
+}
+
+@utility num-en {
+  font-feature-settings: 'ss01' off;
+}
+
+@theme inline {
+  --font-heading: var(--font-sans);
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-mono);
+  /* وزن‌ها یک پله سبک‌تر از پیش‌فرض Tailwind (تصمیم نوروست)؛ متن عادی ۴۰۰ می‌ماند. */
+  --font-weight-medium: 400;
+  --font-weight-semibold: 500;
+  --font-weight-bold: 600;
+  --font-weight-extrabold: 700;
+  --font-weight-black: 800;
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-info: var(--info);
+  /* سطوح وضعیت (پس‌زمینه‌ی ملایم بنر/بج/کارت وضعیت). به‌جای پالت خام Tailwind
+     (bg-emerald-500، text-amber-600 …) از این جفت‌ها استفاده شود: bg-*-surface + text-*. */
+  --color-success-surface: var(--success-surface);
+  --color-warning-surface: var(--warning-surface);
+  --color-info-surface: var(--info-surface);
+  --color-destructive-surface: var(--destructive-surface);
+  /* متن AA برای سطح‌های وضعیت (bg-*-surface text-*-ink) */
+  --color-success-ink: var(--success-ink);
+  --color-warning-ink: var(--warning-ink);
+  --color-info-ink: var(--info-ink);
+  --color-destructive-ink: var(--destructive-ink);
+  /* رنگ دسته‌ای (تیِر/محصول/کانال) */
+  --color-tone-sky: var(--tone-sky);
+  --color-tone-violet: var(--tone-violet);
+  --color-tone-emerald: var(--tone-emerald);
+  --color-tone-amber: var(--tone-amber);
+  --color-tone-rose: var(--tone-rose);
+  --color-tone-teal: var(--tone-teal);
+  --color-tone-slate: var(--tone-slate);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --color-foreground: var(--foreground);
+  --color-background: var(--background);
+  /* سلسله مراتب سطح (Nova): سطح ۱ کارت اصلی، سطح ۲ بلوک درون کارت، سطح ۳ بلوک فرورفته.
+     کارت‌ها و بلوک‌ها فقط از این توکن‌ها استفاده می‌کنند تا تم/رنگ پایه قابل تغییر بماند. */
+  --color-surface-1: var(--surface-1);
+  --color-surface-2: var(--surface-2);
+  --color-surface-3: var(--surface-3);
+  /* گوشه‌ها: کنترل‌ها (دکمه/فیلد) ۶px (rounded-lg = --radius؛ تصمیم نوروست، یک پله بیشتر از ۴px ویندوز ۱۱)،
+     flyout/منو/لایه ۸px (rounded-overlay)،
+     کارت‌ها ۱۲px (rounded-xl؛ تصمیم نوروست، گردتر از ۸px استاندارد Fluent). */
+  --radius-sm: calc(var(--radius) * 0.5);
+  --radius-md: calc(var(--radius) * 0.75);
+  --radius-lg: var(--radius);
+  --radius-overlay: 0.625rem;
+  --radius-xl: 0.875rem;
+  --radius-2xl: 1rem;
+  --radius-3xl: 1.25rem;
+  --radius-4xl: 1.5rem;
+
+  /* افزوده‌های Fluent که shadcn ندارد */
+  --color-layer: var(--layer);
+  --color-control: var(--control);
+  --color-stroke-control-bottom: var(--stroke-control-bottom);
+  --color-stroke-input: var(--stroke-input);
+  --color-stroke-card: var(--stroke-card);
+  --shadow-card: var(--fl-shadow-card);
+  --shadow-flyout: var(--fl-shadow-flyout);
+  --shadow-dialog: var(--fl-shadow-dialog);
+  --ease-fluent: cubic-bezier(0, 0, 0, 1);
+  /* منحنی‌های Fluent 2 (سه نقش: استاندارد، ورود/توقف، خروج/شروع) */
+  --ease-fluent-standard: cubic-bezier(0.33, 0, 0.67, 1);
+  --ease-fluent-decel: cubic-bezier(0.1, 0.9, 0.2, 1);
+  --ease-fluent-accel: cubic-bezier(0.7, 0, 1, 0.5);
+}
+
+/* مدت‌های حرکت به‌صورت utility توکن‌شده: duration-fast/base/slow/slower.
+   قاعده: تغییر حالت‌های کوچک (hover/press) fast، ورود لایه‌ها base، ورود صفحه/شیت slow،
+   خروج همیشه کوتاه‌تر از ورود (≈ ۶۰–۷۰٪) است. */
+@utility duration-fast {
+  transition-duration: var(--motion-fast);
+}
+@utility duration-base {
+  transition-duration: var(--motion-base);
+}
+@utility duration-slow {
+  transition-duration: var(--motion-slow);
+}
+@utility duration-slower {
+  transition-duration: var(--motion-slower);
+}
+
+/* ==========================================================================
+   دیزاین‌سیستم نوروست — نسخه ۲ (shadcn Nova + آبی مدرن)
+   L1 = مقادیر خام (رامپ برند + رامپ پایه) · L2 = توکن‌های معنایی · L3 = استثنای کامپوننت
+   --brand تنها مقدار قابل‌تغییر برند است؛ رامپ از آن مشتق می‌شود.
+   --base-* با data-base روی <html> عوض می‌شود (white-label).
+   سند: docs/design-system.md · ساختار و وضعیت: docs/frontend-architecture.md
+   ========================================================================== */
+:root {
+  --brand: #2563eb; /* آبی مدرن (blue-600) */
+  --brand-50: color-mix(in oklab, var(--brand) 6%, #fff);
+  --brand-100: color-mix(in oklab, var(--brand) 12%, #fff);
+  --brand-200: color-mix(in oklab, var(--brand) 24%, #fff);
+  --brand-300: color-mix(in oklab, var(--brand) 40%, #fff);
+  --brand-400: color-mix(in oklab, var(--brand) 62%, #fff);
+  --brand-500: color-mix(in oklab, var(--brand) 82%, #fff);
+  --brand-600: var(--brand);
+  --brand-700: color-mix(in oklab, var(--brand) 88%, #000);
+  --brand-800: color-mix(in oklab, var(--brand) 76%, #000);
+  --brand-900: color-mix(in oklab, var(--brand) 64%, #000);
+  --brand-950: color-mix(in oklab, var(--brand) 50%, #000);
+}
+
+/* رامپ پایه‌ی خنثی: پیش‌فرض slate؛ بقیه با data-base */
+:root,
+html[data-base='slate'] {
+  --base-50: #f8fafc;
+  --base-100: #f1f5f9;
+  --base-200: #e2e8f0;
+  --base-300: #cbd5e1;
+  --base-400: #94a3b8;
+  --base-500: #64748b;
+  --base-600: #475569;
+  --base-700: #334155;
+  --base-800: #1e293b;
+  --base-900: #0f172a;
+  --base-950: #020617;
+}
+html[data-base='gray'] {
+  --base-50: #f9fafb;
+  --base-100: #f3f4f6;
+  --base-200: #e5e7eb;
+  --base-300: #d1d5db;
+  --base-400: #9ca3af;
+  --base-500: #6b7280;
+  --base-600: #4b5563;
+  --base-700: #374151;
+  --base-800: #1f2937;
+  --base-900: #111827;
+  --base-950: #030712;
+}
+html[data-base='zinc'] {
+  --base-50: #fafafa;
+  --base-100: #f4f4f5;
+  --base-200: #e4e4e7;
+  --base-300: #d4d4d8;
+  --base-400: #a1a1aa;
+  --base-500: #71717a;
+  --base-600: #52525b;
+  --base-700: #3f3f46;
+  --base-800: #27272a;
+  --base-900: #18181b;
+  --base-950: #09090b;
+}
+html[data-base='neutral'] {
+  --base-50: #fafafa;
+  --base-100: #f5f5f5;
+  --base-200: #e5e5e5;
+  --base-300: #d4d4d4;
+  --base-400: #a3a3a3;
+  --base-500: #737373;
+  --base-600: #525252;
+  --base-700: #404040;
+  --base-800: #262626;
+  --base-900: #171717;
+  --base-950: #0a0a0a;
+}
+html[data-base='stone'] {
+  --base-50: #fafaf9;
+  --base-100: #f5f5f4;
+  --base-200: #e7e5e4;
+  --base-300: #d6d3d1;
+  --base-400: #a8a29e;
+  --base-500: #78716c;
+  --base-600: #57534e;
+  --base-700: #44403c;
+  --base-800: #292524;
+  --base-900: #1c1917;
+  --base-950: #0c0a09;
+}
+
+/* L2 — توکن‌های معنایی (روشن). ظاهر: Nova؛ سطوح جامد، خط ۱px، سایه‌ی ملایم. */
+:root {
+  color-scheme: light;
+  /* ایران‌یکان (IRANYekan) برای حروف و ارقام فارسی اول، لاتین به Geist می‌افتد. */
+  --font-sans: var(--font-fa), var(--font-geist);
+  --font-mono: var(--font-mono-geist), var(--font-fa);
+
+  --background: #ffffff;
+  --foreground: var(--base-900);
+  --card: #ffffff;
+  --card-foreground: var(--base-900);
+  --popover: #ffffff;
+  --popover-foreground: var(--base-900);
+  --primary: var(--brand-600);
+  --primary-foreground: var(--brand-on, #ffffff); /* با setBrandColor محاسبه می‌شود (AA) */
+  --secondary: var(--base-100);
+  --secondary-foreground: var(--base-900);
+  --muted: var(--base-100);
+  --muted-foreground: var(--base-600);
+  --surface-1: var(--card);
+  --surface-2: var(--muted);
+  --surface-3: color-mix(in oklab, var(--base-200) 55%, var(--background));
+  --accent: var(--base-100);
+  --accent-foreground: var(--base-900);
+  --destructive: #dc2626;
+  --destructive-foreground: #ffffff;
+  --success: #15803d;
+  --warning: #b45309;
+  --info: var(--brand-600);
+  --border: var(--base-200);
+  --input: var(--base-300);
+  --ring: var(--brand-600);
+  --chart-1: var(--brand-600);
+  --chart-2: #15803d;
+  --chart-3: #b45309;
+  --chart-4: #7c3aed;
+  --chart-5: #dc2626;
+  --radius: 0.625rem;
+  --sidebar: var(--background);
+  --sidebar-foreground: var(--base-900);
+  --sidebar-primary: var(--brand-600);
+  --sidebar-primary-foreground: var(--brand-on, #ffffff);
+  --sidebar-accent: var(--base-100);
+  --sidebar-accent-foreground: var(--base-900);
+  --sidebar-border: var(--base-200);
+  --sidebar-ring: var(--brand-600);
+
+  --fl-shadow-card: 0 1px 2px rgb(15 23 42 / 0.06);
+  --fl-shadow-flyout: 0 8px 24px rgb(15 23 42 / 0.12);
+  --fl-shadow-dialog: 0 24px 56px rgb(15 23 42 / 0.18);
+
+  /* --- توکن‌های منسوخ Fluent (نقشه‌ی سازگاری موقت) ---
+     فقط تا پایان فاز ۳ زنده‌اند؛ کلاس‌های قدیمی را به معنای Nova وصل می‌کنند.
+     حذف نهایی: پس از پاک‌سازی کامل فاز ۳ (frontend-architecture.md §۱۲). */
+  --layer: var(--background);
+  --control: var(--background);
+  --stroke-card: var(--border);
+  --stroke-control-bottom: var(--border);
+  --stroke-input: var(--input);
+  --mica-tint-1: transparent;
+  --mica-tint-2: transparent;
+
+  /* --- وضعیت: جفت «سطح ملایم + متن AA» (جای پالت خام) ---
+     استفاده: bg-success-surface text-success-ink … */
+  --success-surface: color-mix(in oklab, var(--success) 10%, var(--popover));
+  --success-ink: color-mix(in oklab, var(--success) 85%, #000);
+  --warning-surface: color-mix(in oklab, var(--warning) 10%, var(--popover));
+  --warning-ink: color-mix(in oklab, var(--warning) 85%, #000);
+  --info-surface: color-mix(in oklab, var(--info) 8%, var(--popover));
+  --info-ink: color-mix(in oklab, var(--info) 85%, #000);
+  --destructive-surface: color-mix(in oklab, var(--destructive) 8%, var(--popover));
+  --destructive-ink: color-mix(in oklab, var(--destructive) 85%, #000);
+
+  /* --- رنگ‌های دسته‌ای (categorical) برای تیِر/محصول/کانال ---
+     جای پالت خام؛ مقادیر روشن از پله‌ی ۷۰۰ انتخاب شده‌اند تا متن tone روی کارت سفید AA بماند. */
+  --tone-sky: #0369a1;
+  --tone-violet: #6d28d9;
+  --tone-emerald: #047857;
+  --tone-amber: #b45309;
+  --tone-rose: #be123c;
+  --tone-teal: #0f766e;
+  --tone-slate: #334155;
+
+  --motion-fast: 120ms;
+  --motion-base: 180ms;
+  --motion-slow: 260ms;
+  --motion-slower: 400ms;
+
+  /* --- لایه‌بندی: تنها مقیاس مجاز z-index ---
+     در className از z-<عدد> مطابق همین مقیاس استفاده شود؛ مقدار دلخواه ممنوع. */
+  --z-base: 0;
+  --z-raised: 10;
+  --z-sticky: 20;
+  --z-overlay: 40;
+  --z-modal: 50;
+  --z-popover: 60;
+  --z-toast: 100;
+  --z-tooltip: 110;
+
+  /* ارتفاع نوار چسبان (پنل/مارکتینگ) برای scroll-padding و لنگرهای فوکوس */
+  --app-header-height: 64px;
+}
+
+.dark {
+  color-scheme: dark;
+  /* پایه: تیره‌ی مایل به آبی؛ با data-base هم تغییر می‌کند */
+  --background: color-mix(in oklab, var(--base-950) 88%, var(--brand-950));
+  --foreground: #e6edf7;
+  --card: color-mix(in oklab, var(--base-900) 90%, var(--brand-900));
+  --card-foreground: #e6edf7;
+  --popover: color-mix(in oklab, var(--base-900) 96%, var(--brand-950));
+  --popover-foreground: #e6edf7;
+  --primary: var(--brand-400);
+  --primary-foreground: #0b1220;
+  --secondary: color-mix(in oklab, var(--base-900) 86%, var(--brand-800));
+  --secondary-foreground: #e6edf7;
+  --muted: color-mix(in oklab, var(--base-900) 88%, var(--brand-800));
+  --muted-foreground: var(--base-400);
+  --surface-1: var(--card);
+  --surface-2: var(--muted);
+  --surface-3: color-mix(in oklab, var(--base-800) 70%, var(--background));
+  --accent: color-mix(in oklab, var(--base-800) 84%, var(--brand-800));
+  --accent-foreground: #e6edf7;
+  --destructive: #f87171;
+  --destructive-foreground: #0b1220;
+  --success: #4ade80;
+  --warning: #fbbf24;
+  --info: var(--brand-400);
+
+  /* رنگ دسته‌ای در تم تیره: روشن‌تر (قاعده‌ی color-dark-mode) */
+  --tone-sky: #38bdf8;
+  --tone-violet: #a78bfa;
+  --tone-emerald: #34d399;
+  --tone-amber: #fbbf24;
+  --tone-rose: #fb7185;
+  --tone-teal: #2dd4bf;
+  --tone-slate: #94a3b8;
+  --border: color-mix(in oklab, var(--base-800) 82%, var(--brand-800));
+  --input: color-mix(in oklab, var(--base-700) 78%, var(--brand-800));
+  --ring: var(--brand-400);
+  --chart-1: var(--brand-400);
+  --chart-2: #4ade80;
+  --chart-3: #fbbf24;
+  --chart-4: #a78bfa;
+  --chart-5: #f87171;
+  --sidebar: var(--background);
+  --sidebar-foreground: #e6edf7;
+  --sidebar-primary: var(--brand-400);
+  --sidebar-primary-foreground: #0b1220;
+  --sidebar-accent: color-mix(in oklab, var(--base-800) 84%, var(--brand-800));
+  --sidebar-accent-foreground: #e6edf7;
+  --sidebar-border: color-mix(in oklab, var(--base-800) 82%, var(--brand-800));
+  --sidebar-ring: var(--brand-400);
+
+  --fl-shadow-card: 0 1px 2px rgb(0 0 0 / 0.4);
+  --fl-shadow-flyout: 0 8px 24px rgb(0 0 0 / 0.5);
+  --fl-shadow-dialog: 0 24px 56px rgb(0 0 0 / 0.6);
+
+  /* نقشه‌ی سازگاری موقت Fluent (حذف در فاز ۳) */
+  --layer: var(--background);
+  --control: var(--card);
+  --stroke-card: var(--border);
+  --stroke-control-bottom: var(--border);
+  --stroke-input: var(--input);
+  --mica-tint-1: transparent;
+  --mica-tint-2: transparent;
+
+  /* وضعیت در تم تیره: سطح ملایم‌تر، متن روشن (همان قاعده‌ی bg-*-surface + text-*-ink) */
+  --success-surface: color-mix(in oklab, var(--success) 16%, var(--popover));
+  --success-ink: var(--success);
+  --warning-surface: color-mix(in oklab, var(--warning) 16%, var(--popover));
+  --warning-ink: var(--warning);
+  --info-surface: color-mix(in oklab, var(--info) 14%, var(--popover));
+  --info-ink: var(--info);
+  --destructive-surface: color-mix(in oklab, var(--destructive) 14%, var(--popover));
+  --destructive-ink: var(--destructive);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply text-foreground;
+    /* سطح جامد Nova (پایان Mica/گرادیان) */
+    background-color: var(--background);
+    font-feature-settings: 'ss01';
+  }
+  html {
+    @apply font-sans;
+    /* نوار چسبان نباید کنترل فوکوس‌شده را بپوشاند (WCAG 2.2 AA، focus-not-obscured) */
+    scroll-padding-top: calc(var(--app-header-height) + 0.5rem);
+  }
+  /* لنگرهای درون‌صفحه‌ای (پرش به خطا/بخش) زیر نوار چسبان نروند */
+  :target {
+    scroll-margin-top: calc(var(--app-header-height) + 0.5rem);
+  }
+  ::selection {
+    background-color: var(--primary);
+    color: var(--primary-foreground);
+  }
+
+  /* ارقام لاتین: برای همه‌ی محیط‌های چپ‌به‌راست، انگلیسی، مونو، پیوندها و فیلدهای نشانی */
+  [dir='ltr'],
+  [lang='en'],
+  [lang^='en-'],
+  code,
+  kbd,
+  samp,
+  pre,
+  .font-mono,
+  .num-en,
+  input[type='url'],
+  input[type='email'],
+  input[type='tel'] {
+    font-feature-settings: 'ss01' off;
+  }
+
+  /* بازگرداندن ارقام فارسی برای محیط‌های صریح راست‌به‌چپ یا زبان فارسی درون محیط لاتین */
+  [dir='rtl'],
+  [lang='fa'],
+  [lang^='fa-'],
+  .num-fa {
+    font-feature-settings: 'ss01' on;
+  }
+}
+
+/* سطح شناور جامد (Nova): شیشه/بلور فقط برای بازخورد، نه دکوراسیون */
+@utility acrylic {
+  background-color: var(--background);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* صحنه‌های متحرک (MotionArt، docs/design-system.md): هر لایه یک‌بار هنگام ورود با تأخیر --d پخش می‌شود. */
+[data-slot='motion-art'] .ma {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation-duration: var(--t, 600ms);
+  animation-timing-function: var(--ease-fluent);
+  animation-delay: var(--d, 0ms);
+  animation-fill-mode: both;
+}
+[data-slot='motion-art'] .ma-draw {
+  stroke-dasharray: 1;
+}
+.ma-pop { animation-name: ma-pop; }
+.ma-rise { animation-name: ma-rise; }
+.ma-drop { animation-name: ma-drop; }
+.ma-fade { animation-name: ma-fade; }
+.ma-draw { animation-name: ma-draw; }
+.ma-spin { animation-name: ma-spin; }
+.ma-slide { animation-name: ma-slide; }
+.ma-shake { animation-name: ma-shake; }
+.ma-twinkle { animation-name: ma-twinkle; }
+.ma-ripple { animation-name: ma-ripple; }
+/* تکان کوتاه بیرون از MotionArt (مثلاً پیام خطای دیالوگ پس از اقدام ناموفق). */
+.ma-nudge { animation: ma-shake 400ms var(--ease-fluent); }
+@keyframes ma-ripple {
+  from { opacity: 0.7; transform: scale(0.8); }
+  to { opacity: 0; transform: scale(1.35); }
+}
+@keyframes ma-pop {
+  0% { opacity: 0; transform: scale(0.5); }
+  60% { opacity: 1; transform: scale(1.06); }
+  100% { opacity: 1; transform: none; }
+}
+@keyframes ma-rise {
+  from { opacity: 0; transform: translateY(14%); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes ma-drop {
+  0% { opacity: 0; transform: translateY(-22%); }
+  70% { opacity: 1; transform: translateY(4%); }
+  100% { opacity: 1; transform: none; }
+}
+@keyframes ma-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes ma-draw {
+  from { stroke-dashoffset: 1; }
+  to { stroke-dashoffset: 0; }
+}
+@keyframes ma-spin {
+  from { opacity: 0; transform: rotate(-120deg) scale(0.6); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes ma-slide {
+  from { opacity: 0; transform: translateX(var(--x, 20%)); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes ma-shake {
+  0%, 100% { transform: none; }
+  20% { transform: translateX(-6%); }
+  40% { transform: translateX(5%); }
+  60% { transform: translateX(-3%); }
+  80% { transform: translateX(2%); }
+}
+@keyframes ma-twinkle {
+  0% { opacity: 0; transform: scale(0) rotate(-45deg); }
+  60% { opacity: 1; transform: scale(1.25) rotate(0deg); }
+  100% { opacity: 1; transform: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  [data-slot='motion-art'] .ma {
+    animation: none;
+  }
+}

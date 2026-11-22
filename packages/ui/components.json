@@ -1,0 +1,27 @@
+{
+  "$schema": "https://ui.shadcn.com/schema.json",
+  "style": "base-nova",
+  "rsc": true,
+  "tsx": true,
+  "tailwind": {
+    "config": "",
+    "css": "src/styles/globals.css",
+    "baseColor": "neutral",
+    "cssVariables": true
+  },
+  "iconLibrary": "lucide",
+  "aliases": {
+    "components": "@noroset/ui/components",
+    "utils": "@noroset/ui/lib/utils",
+    "hooks": "@noroset/ui/hooks",
+    "lib": "@noroset/ui/lib",
+    "ui": "@noroset/ui/components"
+  },
+  "rtl": true,
+  "menuColor": "default",
+  "menuAccent": "subtle",
+  "registries": {
+    "@persianlabs": "https://ui.persian-labs.ir/r/{name}.json",
+    "@persianlabsui": "https://ui.persian-labs.ir/r/{name}.json"
+  }
+}

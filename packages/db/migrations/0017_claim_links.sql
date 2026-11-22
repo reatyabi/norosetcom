@@ -1,0 +1,3 @@
+ALTER TABLE "norolink_pages" DROP COLUMN "claim_target_mobile";--> statement-breakpoint
+-- لینک‌های واگذاری در مدیریت پلتفرم (docs/architecture.md §9.8): ادمین فقط ردیف صفحه‌هایی را می‌بیند که لینک فعال تحویل‌نگرفته دارند؛ بقیه‌ی صفحه‌ها همچنان policy ادمین ندارند.
+CREATE POLICY "norolink_pages_platform_admin_claim_select" ON "norolink_pages" FOR SELECT USING (is_platform_admin() AND claim_token IS NOT NULL AND claimed_at IS NULL);

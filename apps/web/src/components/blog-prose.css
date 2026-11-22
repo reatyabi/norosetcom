@@ -1,0 +1,238 @@
+/*
+ * تایپوگرافی متن مقاله‌ی بلاگ (docs/architecture.md §9.12). هم رندر عمومی (BlogContent در @noroset/blog/ui) و هم
+ * ویرایشگر TipTap مدیریت پلتفرم همین کلاس را می‌گیرند تا ویرایش همان چیزی باشد که خواننده می‌بیند.
+ * رنگ‌ها از توکن‌های @noroset/ui؛ حالت تیره خودکار.
+ */
+.blog-prose {
+  --blog-gap: 1.25em;
+  color: var(--foreground);
+  font-size: 1.0625rem;
+  line-height: 2;
+  overflow-wrap: anywhere;
+}
+@media (min-width: 768px) {
+  .blog-prose {
+    font-size: 1.125rem;
+  }
+}
+.blog-prose > * + *,
+.blog-prose .ProseMirror > * + * {
+  margin-top: var(--blog-gap);
+}
+.blog-prose p:empty::before {
+  content: '\200b';
+}
+.blog-prose h2,
+.blog-prose h3,
+.blog-prose h4 {
+  font-weight: 700;
+  line-height: 1.5;
+  scroll-margin-top: 6rem;
+  color: var(--foreground);
+}
+.blog-prose h2 {
+  font-size: 1.5em;
+  margin-top: 2em;
+}
+.blog-prose h3 {
+  font-size: 1.25em;
+  margin-top: 1.6em;
+}
+.blog-prose h4 {
+  font-size: 1.08em;
+  margin-top: 1.4em;
+}
+.blog-prose .blog-heading {
+  position: relative;
+}
+.blog-prose .blog-anchor {
+  margin-inline-start: 0.4em;
+  color: var(--muted-foreground);
+  text-decoration: none;
+  opacity: 0;
+  transition: opacity 150ms;
+}
+.blog-prose .blog-heading:hover .blog-anchor,
+.blog-prose .blog-anchor:focus-visible {
+  opacity: 1;
+}
+.blog-prose a {
+  color: var(--primary);
+  text-decoration: underline;
+  text-underline-offset: 0.25em;
+  text-decoration-thickness: 1px;
+}
+.blog-prose a:hover {
+  text-decoration-thickness: 2px;
+}
+.blog-prose strong {
+  font-weight: 700;
+}
+.blog-prose code {
+  font-family: var(--font-mono);
+  font-size: 0.875em;
+  background: var(--muted);
+  border-radius: 4px;
+  padding: 0.1em 0.35em;
+  direction: ltr;
+  unicode-bidi: isolate;
+}
+.blog-prose ul,
+.blog-prose ol {
+  padding-inline-start: 1.5em;
+}
+.blog-prose ul {
+  list-style: disc;
+}
+.blog-prose ol {
+  list-style: decimal;
+}
+.blog-prose li + li,
+.blog-prose li > * + * {
+  margin-top: 0.4em;
+}
+.blog-prose li::marker {
+  color: var(--muted-foreground);
+}
+.blog-prose blockquote {
+  border-inline-start: 3px solid var(--primary);
+  padding-inline-start: 1em;
+  color: var(--muted-foreground);
+  font-style: normal;
+}
+.blog-prose blockquote > * + * {
+  margin-top: 0.75em;
+}
+.blog-prose hr {
+  border: 0;
+  border-top: 1px solid var(--border);
+  margin-block: 2.5em;
+}
+.blog-prose pre,
+.blog-prose .blog-code {
+  direction: ltr;
+  text-align: left;
+  font-family: var(--font-mono);
+  font-size: 0.85em;
+  line-height: 1.7;
+  background: color-mix(in oklab, var(--foreground) 6%, var(--background));
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 1em 1.2em;
+  overflow-x: auto;
+  white-space: pre;
+}
+.blog-prose pre code {
+  background: none;
+  padding: 0;
+  font-size: inherit;
+}
+.blog-prose .blog-figure,
+.blog-prose figure {
+  margin-inline: 0;
+}
+.blog-prose img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin-inline: auto;
+  border-radius: 10px;
+}
+.blog-prose figcaption {
+  margin-top: 0.6em;
+  text-align: center;
+  font-size: 0.85em;
+  line-height: 1.7;
+  color: var(--muted-foreground);
+}
+.blog-prose .blog-video {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--muted);
+}
+.blog-prose .blog-video iframe {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+.blog-prose .blog-callout {
+  --tone: var(--info);
+  border-radius: 10px;
+  border-inline-start: 4px solid var(--tone);
+  background: color-mix(in oklab, var(--tone) 9%, var(--background));
+  padding: 0.9em 1.1em;
+}
+.blog-prose .blog-callout[data-tone='tip'] {
+  --tone: var(--success);
+}
+.blog-prose .blog-callout[data-tone='warning'] {
+  --tone: var(--warning);
+}
+.blog-prose .blog-callout[data-tone='danger'] {
+  --tone: var(--destructive);
+}
+.blog-prose .blog-callout > * + * {
+  margin-top: 0.6em;
+}
+.blog-prose .blog-table,
+.blog-prose .tableWrapper {
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+.blog-prose table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.92em;
+  line-height: 1.8;
+}
+.blog-prose th,
+.blog-prose td {
+  border-bottom: 1px solid var(--border);
+  border-inline-start: 1px solid var(--border);
+  padding: 0.55em 0.8em;
+  text-align: start;
+  vertical-align: top;
+  min-width: 6em;
+  position: relative;
+}
+.blog-prose th:first-child,
+.blog-prose td:first-child {
+  border-inline-start: 0;
+}
+.blog-prose tr:last-child > * {
+  border-bottom: 0;
+}
+.blog-prose th {
+  background: var(--muted);
+  font-weight: 700;
+}
+.blog-prose th > * + *,
+.blog-prose td > * + * {
+  margin-top: 0.4em;
+}
+.blog-prose .blog-faq,
+.blog-prose [data-type='details'] {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 0.25em 1em;
+}
+.blog-prose .blog-faq + .blog-faq {
+  margin-top: 0.6em;
+}
+.blog-prose .blog-faq summary {
+  cursor: pointer;
+  font-weight: 700;
+  padding-block: 0.5em;
+  list-style-position: inside;
+}
+.blog-prose .blog-faq-body {
+  padding-bottom: 0.75em;
+}
+.blog-prose .blog-faq-body > * + * {
+  margin-top: 0.6em;
+}

@@ -1,0 +1,73 @@
+/* ویرایشگر مقاله (TipTap): فقط رفتارهای ویرایش؛ ظاهر متن از blog-prose.css. */
+.blog-editor .ProseMirror {
+  outline: none;
+  caret-color: var(--primary);
+}
+.blog-editor .ProseMirror > * + * {
+  margin-top: var(--blog-gap);
+}
+.blog-editor .ProseMirror p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  float: right;
+  height: 0;
+  pointer-events: none;
+  color: var(--muted-foreground);
+  opacity: 0.7;
+}
+.blog-editor .ProseMirror-selectednode {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+.blog-editor .ProseMirror-gapcursor::after {
+  border-top-color: var(--foreground);
+}
+.blog-editor .ProseMirror .selectedCell::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: color-mix(in oklab, var(--primary) 14%, transparent);
+  pointer-events: none;
+}
+.blog-editor .ProseMirror table {
+  table-layout: fixed;
+}
+/* پرسش و پاسخ: دکمه‌ی باز/بسته‌ی افزونه‌ی Details */
+.blog-editor [data-type='details'] {
+  display: flex;
+  gap: 0.5rem;
+}
+.blog-editor [data-type='details'] > button {
+  flex-shrink: 0;
+  margin-top: 0.55em;
+  width: 1.25rem;
+  height: 1.25rem;
+  border-radius: 4px;
+  background: var(--muted);
+  font-size: 0.7rem;
+  line-height: 1;
+}
+.blog-editor [data-type='details'] > button::before {
+  content: '◀';
+}
+.blog-editor [data-type='details'].is-open > button::before {
+  content: '▼';
+}
+.blog-editor [data-type='details'] > div {
+  flex: 1;
+  min-width: 0;
+}
+.blog-editor [data-type='details'] summary {
+  font-weight: 700;
+  list-style: none;
+  padding-block: 0.5em;
+}
+.blog-editor [data-type='details'] summary::-webkit-details-marker {
+  display: none;
+}
+.blog-editor [data-type='details']:not(.is-open) [data-type='detailsContent'] {
+  display: none;
+}
+.blog-editor .blog-callout [data-node-view-content] > * + * {
+  margin-top: 0.6em;
+}

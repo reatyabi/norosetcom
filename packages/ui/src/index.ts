@@ -1,0 +1,42 @@
+// @noroset/ui — دیزاین سیستم: shadcn (base-nova) روی Base UI + lucide، کامپوننت‌های پایه از Persian Lab UI.
+// کامپوننت‌ها با shadcn CLI از رجیستری @persianlabs اضافه می‌شوند (packages/ui/components.json) و اینجا export می‌شوند؛
+// اپ‌ها و محصولات فقط از همین index import می‌کنند (قانون مرز). سند: docs/design-system.md
+export { cn } from './lib/utils';
+export * from './lib/theme';
+export * from './components/alert';
+export * from './components/avatar';
+export * from './components/badge';
+export * from './components/block';
+export * from './components/button';
+export * from './components/card';
+export * from './components/checkbox';
+export * from './components/dialog';
+export * from './components/dropdown-menu';
+export * from './components/empty';
+export * from './components/error-summary';
+export * from './components/field';
+export * from './components/file-picker';
+export * from './components/file-type-icon';
+export * from './components/input-group';
+export * from './components/input-otp';
+export * from './components/input';
+export * from './components/label';
+export * from './components/motion-art';
+export * from './components/native-select';
+export * from './components/password-input';
+export * from './components/popover';
+export * from './components/scroll-area';
+export * from './components/segmented';
+export * from './components/switch';
+export * from './components/system-icon';
+export * from './components/separator';
+export * from './components/sheet';
+export * from './components/sidebar';
+export * from './components/skeleton';
+export * from './components/spinner';
+export * from './components/table';
+export * from './components/textarea';
+export * from './components/tooltip';
+export * from './hooks/use-controllable-state';
+export * from './hooks/use-media-query';
+export * from './lib/image-processing';

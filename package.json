@@ -1,0 +1,33 @@
+{
+  "name": "noroset",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Noroset — پلتفرم SaaS فارسی (RTL)",
+  "engines": {
+    "node": ">=20.9.0"
+  },
+  "scripts": {
+    "dev": "pnpm build:packages && pnpm -r --parallel --filter \"./apps/*\" run dev",
+    "build": "pnpm build:packages && pnpm -r --filter \"./apps/*\" run build",
+    "build:packages": "pnpm --filter @noroset/db build && pnpm --filter @noroset/core build && pnpm --filter @noroset/field-engine build && pnpm --filter @noroset/norofile build && pnpm --filter @noroset/noroform build && pnpm --filter @noroset/norolink build && pnpm --filter @noroset/blog build && pnpm --filter @noroset/admin build",
+    "lint": "eslint .",
+    "typecheck": "pnpm build:packages && pnpm -r --if-present run typecheck",
+    "test": "pnpm build:packages && pnpm -r --if-present run test",
+    "check:boundaries": "depcruise .",
+    "check:design": "node scripts/check-design-tokens.mjs",
+    "check:contrast": "node scripts/check-contrast.mjs",
+    "check:size": "node scripts/check-file-size.mjs",
+    "check:all": "pnpm check:boundaries && pnpm check:design && pnpm check:contrast && pnpm check:size",
+    "db:migrate": "pnpm --filter @noroset/db db:migrate"
+  },
+  "devDependencies": {
+    "@eslint/js": "9.39.5",
+    "dependency-cruiser": "18.7.0",
+    "eslint": "9.39.5",
+    "eslint-config-next": "16.4.2",
+    "eslint-config-prettier": "10.1.8",
+    "prettier": "3.9.10",
+    "typescript": "6.0.3",
+    "typescript-eslint": "8.72.0"
+  }
+}

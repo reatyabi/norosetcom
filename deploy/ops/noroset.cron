@@ -1,0 +1,5 @@
+# /etc/cron.d/noroset (زمان سرور). بک‌آپ و پاک‌سازی در ساعت کم‌بار.
+SHELL=/bin/bash
+0 3 * * * deploy /srv/noroset/current/deploy/ops/backup-db.sh >> /srv/noroset/logs/ops.log 2>&1
+30 4 * * * deploy /srv/noroset/current/deploy/ops/cleanup-auth.sh >> /srv/noroset/logs/ops.log 2>&1
+*/5 * * * * deploy /srv/noroset/current/deploy/ops/watchdog.sh >> /srv/noroset/logs/ops.log 2>&1

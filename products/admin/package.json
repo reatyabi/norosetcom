@@ -1,0 +1,31 @@
+{
+  "name": "@noroset/admin",
+  "version": "0.0.0",
+  "private": true,
+  "main": "./dist/api/index.js",
+  "types": "./dist/api/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/api/index.d.ts",
+      "default": "./dist/api/index.js"
+    },
+    "./ui": "./ui/index.ts"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@nestjs/common": "12.2.0",
+    "@noroset/core": "workspace:*",
+    "class-transformer": "0.5.1",
+    "class-validator": "0.15.1"
+  },
+  "devDependencies": {
+    "@types/node": "26.6.5",
+    "dotenv": "18.0.8",
+    "typescript": "6.0.3",
+    "vitest": "5.0.5"
+  }
+}
