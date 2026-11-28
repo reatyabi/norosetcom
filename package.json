@@ -2,6 +2,7 @@
   "name": "noroset",
   "version": "0.1.0",
   "private": true,
+  "packageManager": "pnpm@9.15.5",
   "description": "Noroset — پلتفرم SaaS فارسی (RTL)",
   "engines": {
     "node": ">=20.9.0"

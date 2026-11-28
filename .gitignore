@@ -26,7 +26,11 @@ pnpm-debug.log*
 .DS_Store
 .idea
 .vscode
+.vercel
 coverage
 
 # خروجی بیلد release
 .release
+
+.vercel
+.env*

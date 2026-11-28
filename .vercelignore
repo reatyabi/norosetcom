@@ -1,0 +1,11 @@
+.git
+node_modules
+.next
+.vercel
+.env
+.env.local
+.env.*.local
+.logs
+*.log
+.dev-pids.json
+.release
