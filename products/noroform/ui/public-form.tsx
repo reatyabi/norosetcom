@@ -5,12 +5,12 @@ import {
   ArrowLeftIcon,
   ArrowRightIcon,
   CircleCheckIcon,
+  InfoIcon,
   StarIcon,
 } from 'lucide-react';
 import {
   buildEmbedUrl,
   buildRuntimeState,
-  chromeTypes,
   computeVisiblePages,
   evaluateConditions,
   fieldTypes,
@@ -19,9 +19,8 @@ import {
   isShown,
   LICENSE_BADGE,
   richTextSchema,
-  resolvePageChrome,
+  resolveZones,
   type Answers,
-  type ChromeElement,
   type FormDefinition,
   type FormPage,
   type FormTheme,
@@ -30,6 +29,23 @@ import {
   type SubmissionError,
 } from '@noroset/field-engine';
 import { Button, ErrorSummary, Input, NativeSelect, NativeSelectOption, Textarea, cn } from '@noroset/ui';
+import {
+  NfFieldFrame,
+  NfFieldLabel,
+  NfControlBox,
+  NfChoiceOption,
+  NfRatingStars,
+  NfMediaPlaceholder,
+  NfFieldHelper,
+  NfFieldError,
+  NfMailIcon,
+  NfPhoneIcon,
+  NfHashIcon,
+  NfCalendarIcon,
+  NfImageIcon,
+  NfVideoIcon,
+  NfChevronDownIcon,
+} from './field-primitives';
 import { LogoTitle, type LogoTitleValue } from './logo-title';
 import { FormBackground, backgroundFromTheme } from './background';
 import { answerErrorText, type AnswerError } from './answer-error';
@@ -146,33 +162,68 @@ function FieldInput({
         Boolean(option && typeof option === 'object' && 'value' in option && 'label' in option &&
           typeof option.value === 'string' && typeof option.label === 'string'))
     : [];
-  let input;
+
+  let input: ReactNode;
 
   switch (field.type) {
     case 'long_text':
-      input = <Textarea {...common} rows={4} value={text} placeholder={placeholder} onChange={(event) => onChange(event.target.value)} />;
+      input = (
+        <NfControlBox isMultiline isInvalid={Boolean(error)} interactive>
+          <textarea
+            {...common}
+            rows={4}
+            value={text}
+            placeholder={placeholder}
+            onChange={(event) => onChange(event.target.value)}
+            className="w-full min-h-20 bg-transparent text-sm text-nf-card-foreground outline-none resize-none placeholder:text-nf-muted-foreground/60"
+          />
+        </NfControlBox>
+      );
       break;
     case 'date':
       input = (
-        <div className="flex flex-col gap-1">
-          <Input {...common} type="date" dir="ltr" className="w-56 text-right" value={text} onChange={(event) => onChange(event.target.value)} />
-          {text && <span className="text-xs text-muted-foreground">{formatJalali(text)}</span>}
+        <div className="flex flex-col gap-1 w-full max-w-xs">
+          <NfControlBox tabularNums icon={<NfCalendarIcon />} isInvalid={Boolean(error)} interactive>
+            <input
+              {...common}
+              type="date"
+              dir="ltr"
+              value={text}
+              onChange={(event) => onChange(event.target.value)}
+              className="w-full bg-transparent text-sm text-nf-card-foreground outline-none text-right placeholder:text-nf-muted-foreground/60"
+            />
+          </NfControlBox>
+          {text && <span className="text-xs text-nf-muted-foreground">{formatJalali(text)}</span>}
         </div>
       );
       break;
     case 'single_choice':
       input = settings.display === 'dropdown' ? (
-        <NativeSelect {...common} value={text} onChange={(event) => onChange(event.target.value)}>
-          <NativeSelectOption value="">انتخاب کنید</NativeSelectOption>
-          {options.map((option) => <NativeSelectOption key={option.value} value={option.value}>{option.label}</NativeSelectOption>)}
-        </NativeSelect>
+        <NfControlBox icon={<NfChevronDownIcon />} isInvalid={Boolean(error)} interactive>
+          <select
+            {...common}
+            value={text}
+            onChange={(event) => onChange(event.target.value)}
+            className="w-full bg-transparent text-sm text-nf-card-foreground outline-none cursor-pointer"
+          >
+            <option value="" className="bg-nf-card text-nf-card-foreground">انتخاب کنید</option>
+            {options.map((option) => (
+              <option key={option.value} value={option.value} className="bg-nf-card text-nf-card-foreground">
+                {option.label}
+              </option>
+            ))}
+          </select>
+        </NfControlBox>
       ) : (
         <div role="radiogroup" {...common} tabIndex={-1} className="flex flex-col gap-1 outline-none">
           {options.map((option) => (
-            <label key={option.value} className="flex min-h-10 cursor-pointer items-center gap-3">
-              <input type="radio" name={id} className="size-[18px]" style={{ accentColor: color }} checked={text === option.value} onChange={() => onChange(option.value)} />
-              {option.label}
-            </label>
+            <NfChoiceOption
+              key={option.value}
+              type="radio"
+              checked={text === option.value}
+              onChange={() => onChange(option.value)}
+              label={option.label}
+            />
           ))}
         </div>
       );
@@ -182,16 +233,19 @@ function FieldInput({
       input = (
         <div role="group" {...common} tabIndex={-1} className="flex flex-col gap-1 outline-none">
           {options.map((option) => (
-            <label key={option.value} className="flex min-h-10 cursor-pointer items-center gap-3">
-              <input
-                type="checkbox"
-                className="size-[18px]"
-                style={{ accentColor: color }}
-                checked={selected.includes(option.value)}
-                onChange={(event) => onChange(event.target.checked ? [...selected, option.value] : selected.filter((item) => item !== option.value))}
-              />
-              {option.label}
-            </label>
+            <NfChoiceOption
+              key={option.value}
+              type="checkbox"
+              checked={selected.includes(option.value)}
+              onChange={() =>
+                onChange(
+                  selected.includes(option.value)
+                    ? selected.filter((item) => item !== option.value)
+                    : [...selected, option.value],
+                )
+              }
+              label={option.label}
+            />
           ))}
         </div>
       );
@@ -201,34 +255,68 @@ function FieldInput({
       const max = typeof settings.max === 'number' ? settings.max : 5;
       const current = typeof value === 'number' ? value : 0;
       input = (
-        <div role="radiogroup" {...common} tabIndex={-1} className="flex flex-wrap gap-1 outline-none">
-          {Array.from({ length: max }, (_, index) => (
-            <button key={index} type="button" role="radio" aria-checked={current === index + 1} aria-label={`${fa(index + 1)} از ${fa(max)}`} onClick={() => onChange(index + 1)} className="rounded-md p-1">
-              <StarIcon className="size-7" style={index < current ? { color, fill: color } : undefined} />
-            </button>
-          ))}
-        </div>
+        <NfRatingStars
+          interactive
+          max={max}
+          value={current}
+          onChange={(rating) => onChange(rating)}
+          color={color}
+        />
       );
       break;
     }
     default: {
       const ltr = field.type === 'email' || field.type === 'phone' || field.type === 'number';
-      input = <Input {...common} dir={ltr ? 'ltr' : undefined} type={field.type === 'email' ? 'email' : 'text'} inputMode={field.type === 'phone' ? 'tel' : field.type === 'number' ? 'decimal' : undefined} className={cn(ltr && 'text-right')} value={text} placeholder={placeholder} onChange={(event) => onChange(event.target.value)} />;
+      const icon =
+        field.type === 'email' ? (
+          <NfMailIcon />
+        ) : field.type === 'phone' ? (
+          <NfPhoneIcon />
+        ) : field.type === 'number' ? (
+          <NfHashIcon />
+        ) : undefined;
+
+      input = (
+        <NfControlBox
+          dir={ltr ? 'ltr' : undefined}
+          tabularNums={field.type === 'phone' || field.type === 'number'}
+          icon={icon}
+          isInvalid={Boolean(error)}
+          interactive
+        >
+          <input
+            {...common}
+            dir={ltr ? 'ltr' : undefined}
+            type={field.type === 'email' ? 'email' : 'text'}
+            inputMode={field.type === 'phone' ? 'tel' : field.type === 'number' ? 'decimal' : undefined}
+            value={text}
+            placeholder={placeholder}
+            onChange={(event) => onChange(event.target.value)}
+            className={cn(
+              'w-full bg-transparent text-sm text-nf-card-foreground outline-none placeholder:text-nf-muted-foreground/60',
+              ltr && 'text-left',
+            )}
+          />
+        </NfControlBox>
+      );
     }
   }
 
   return (
-    <div className="flex flex-col gap-2">
-      <div className="flex flex-col gap-1">
-        <label htmlFor={id} className="font-medium">
-          {field.label}
-          {field.required && <span className="ms-1 text-destructive" aria-label="اجباری">*</span>}
-        </label>
-        {field.description && <div className="text-sm text-muted-foreground"><RichText value={field.description} /></div>}
-      </div>
+    <NfFieldFrame textAlign={settings.text_align as 'right' | 'center' | 'left'}>
+      <NfFieldLabel htmlFor={id} label={field.label} required={field.required} />
       {input}
-      {error && <p id={errorId} className="text-sm text-destructive" role="alert">{answerErrorText(error)}</p>}
-    </div>
+      {field.description && (
+        <NfFieldHelper>
+          <RichText value={field.description} />
+        </NfFieldHelper>
+      )}
+      {error && (
+        <NfFieldError id={errorId}>
+          {answerErrorText(error)}
+        </NfFieldError>
+      )}
+    </NfFieldFrame>
   );
 }
 
@@ -238,143 +326,49 @@ function ContentItem({ item }: { item: Extract<FormDefinition['pages'][number]['
     const doc = richTextSchema.safeParse(settings.doc);
     return doc.success ? <RichText value={doc.data} /> : null;
   }
-  if (item.type === 'image' && typeof settings.url === 'string' && settings.url.startsWith('https://')) {
-    // URL is validated at publish time by field-engine.
-    return <img src={settings.url} alt={typeof settings.alt === 'string' ? settings.alt : ''} className="h-auto w-full" />;
+  if (item.type === 'image') {
+    if (typeof settings.url === 'string' && settings.url.startsWith('https://')) {
+      const alt = typeof settings.alt === 'string' ? settings.alt : '';
+      return (
+        <div className="overflow-hidden rounded-nf-card border border-nf-border bg-nf-muted/20">
+          <img src={settings.url} alt={alt} className="max-h-80 w-full object-contain" />
+          {alt && <div className="p-2 text-center text-xs text-nf-muted-foreground">{alt}</div>}
+        </div>
+      );
+    }
+    return <NfMediaPlaceholder icon={<NfImageIcon />} label="تصویری انتخاب نشده است" />;
   }
-  if (item.type === 'video' && (settings.provider === 'aparat' || settings.provider === 'youtube' || settings.provider === 'vimeo') && typeof settings.video_id === 'string') {
-    return <iframe className="aspect-video w-full" src={buildEmbedUrl(settings.provider, settings.video_id)} title="ویدیوی فرم" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowFullScreen loading="lazy" />;
+  if (item.type === 'video') {
+    if ((settings.provider === 'aparat' || settings.provider === 'youtube' || settings.provider === 'vimeo') && typeof settings.video_id === 'string') {
+      return (
+        <div className="overflow-hidden rounded-nf-card border border-nf-border bg-black/5">
+          <iframe
+            className="aspect-video w-full"
+            src={buildEmbedUrl(settings.provider, settings.video_id)}
+            title="ویدیوی فرم"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+            allowFullScreen
+            loading="lazy"
+          />
+        </div>
+      );
+    }
+    return <NfMediaPlaceholder icon={<NfVideoIcon />} label="ویدیویی انتخاب نشده است" />;
   }
   return null;
 }
 
-function ChromeArea({
-  elements,
-  definition,
-  page,
-  title,
-  answers,
-  startedAt,
-  now,
-  onAction,
-}: {
-  elements: ChromeElement[];
-  definition: FormDefinition;
-  page: FormPage;
-  title: string;
-  answers: Answers;
-  startedAt: number;
-  now: number;
-  onAction: (action: 'start' | 'prev' | 'next' | 'submit') => void;
-}) {
-  if (!elements.length) return null;
-  const state = buildRuntimeState(definition, answers, page, {
-    formName: title,
-    startedAtMs: startedAt,
-    nowMs: now,
-  });
-  return (
-    <div className="flex flex-wrap items-center justify-between gap-3">
-      {elements.map((element) => {
-        const type = chromeTypes.get(element.type);
-        if (!type) return null;
-        const model = type.view(element.settings, state);
-        if (!isRecord(model)) return null;
-        if (element.type === 'nav_buttons') {
-          const buttons = navButtonsFrom(model);
-          if (!buttons.length) return null;
-          return (
-            <div key={element.item_id} className="flex flex-wrap gap-2">
-              {buttons.map((button) => (
-                <Button key={button.action} type="button" variant="secondary" onClick={() => onAction(button.action)}>{button.label}</Button>
-              ))}
-            </div>
-          );
-        }
-        if (element.type === 'form_name' && typeof model.name === 'string') return <span key={element.item_id}>{model.name}</span>;
-        if (element.type === 'logo_title') {
-          return (
-            <div key={element.item_id} className="w-full">
-              <LogoTitle value={logoTitleFrom(model)} formTitle={title} />
-            </div>
-          );
-        }
-        if (element.type === 'page_number' && typeof model.current === 'number' && typeof model.total === 'number') return <span key={element.item_id} className="text-xs text-muted-foreground">صفحه‌ی {fa(model.current)} از {fa(model.total)}</span>;
-        if (element.type === 'progress_timeline' && Array.isArray(model.steps)) {
-          return <div key={element.item_id} className="flex gap-1" aria-label="پیشرفت فرم">{model.steps.map((step, index) => <span key={index} className="h-1.5 flex-1 rounded-full" style={{ backgroundColor: isRecord(step) && step.status === 'upcoming' ? 'var(--border)' : 'var(--primary)' }} />)}</div>;
-        }
-        if (element.type === 'elapsed_timer' && typeof model.elapsed_seconds === 'number') {
-          const seconds = model.elapsed_seconds;
-          return <span key={element.item_id} className="text-xs text-muted-foreground">{fa(Math.floor(seconds / 60))}:{fa(seconds % 60).padStart(2, '۰')}</span>;
-        }
-        if (element.type === 'license_badge') return null;
-        return null;
-      })}
-    </div>
-  );
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
-function logoTitleFrom(model: Record<string, unknown>): LogoTitleValue {
-  return {
-    title: typeof model.title === 'string' ? model.title : '',
-    subtitle: typeof model.subtitle === 'string' ? model.subtitle : '',
-    logo_url: typeof model.logo_url === 'string' ? model.logo_url : '',
-    align: model.align === 'center' || model.align === 'end' ? model.align : 'start',
-    visible: model.visible !== false,
-    show_logo: model.show_logo !== false,
-    show_title: model.show_title !== false,
-    show_subtitle: model.show_subtitle !== false,
-  };
-}
-
-function navButtonsFrom(model: unknown): NavButton[] {
-  if (!isRecord(model) || !Array.isArray(model.buttons)) return [];
-  const buttons: NavButton[] = [];
-  for (const button of model.buttons) {
-    if (!isRecord(button) || !isNavAction(button.action) || typeof button.label !== 'string') continue;
-    buttons.push({ action: button.action, label: button.label });
-  }
-  return buttons;
-}
-
-/**
- * نوار ناوبری فوتر. متن دکمه‌ها از تعریف فرم می‌آید؛ چیدمان از راست‌به‌چپ:
- * دکمه‌ی اصلی (بعدی/ارسال) پهن و دکمه‌ی قبلی کوچک است. در موبایل به پایین
- * صفحه چسبیده می‌ماند و در دسکتاپ کارت پایانی محتوا می‌شود.
- */
 function BottomNav({
-  elements,
-  definition,
-  page,
-  title,
-  answers,
-  startedAt,
-  now,
+  buttons,
   theme,
   busy,
   onAction,
 }: {
-  elements: ChromeElement[];
-  definition: FormDefinition;
-  page: FormPage;
-  title: string;
-  answers: Answers;
-  startedAt: number;
-  now: number;
+  buttons: NavButton[];
   theme: FormTheme;
   busy: boolean;
   onAction: (action: NavAction) => void;
 }) {
-  const state = buildRuntimeState(definition, answers, page, { formName: title, startedAtMs: startedAt, nowMs: now });
-  const buttons: NavButton[] = [];
-  for (const element of elements) {
-    const type = chromeTypes.get(element.type);
-    if (type) buttons.push(...navButtonsFrom(type.view(element.settings, state)));
-  }
   if (!buttons.length) return null;
   return (
     <nav
@@ -478,16 +472,26 @@ export function PublicFormClient({
   const visibleMainPages = visiblePages.filter((item) => item.kind === 'main');
   const mainPageIndex = visibleMainPages.findIndex((item) => item.page_id === page.page_id);
   const currentItems = page.body.items.filter((item) => result!.visibleItems.has(item.item_id));
-  const chrome = resolvePageChrome(definition!, page, { forceLicense: form.branding.forceLicense });
-  // نوار ناوبری از فوتر/نوار پایین جدا می‌شود تا در موبایل به پایین صفحه بچسبد و با واترمارک برندینگ قاطی نشود.
-  const bottomNav = [...chrome.bottomBar, ...chrome.footer].filter((element) => element.type === 'nav_buttons');
-  const bottomBarElements = chrome.bottomBar.filter((element) => element.type !== 'nav_buttons' && element.type !== 'license_badge');
-  const footerElements = chrome.footer.filter((element) => element.type !== 'nav_buttons' && element.type !== 'license_badge');
-  const topBarElements = chrome.topBar;
-  const sidebarElements = chrome.sidebar;
-  const showWatermark = chrome.footer.some((element) => element.type === 'license_badge');
-  const bottomNavVisible = !submitted && bottomNav.length > 0;
-  const bottomBarVisible = !submitted && (bottomBarElements.length > 0 || bottomNavVisible);
+  const zones = resolveZones(definition!);
+
+  const buttons: NavButton[] = [];
+  if (page.kind === 'welcome') {
+    buttons.push({ action: 'start', label: 'شروع' });
+  } else if (page.kind === 'main') {
+    if (pageIndex > 0) {
+      buttons.push({ action: 'prev', label: zones.bottom_bar?.prev_label || 'قبلی' });
+    }
+    const isLastMain = visiblePages.slice(pageIndex + 1).every((p) => p.kind === 'ending');
+    if (isLastMain) {
+      buttons.push({ action: 'submit', label: zones.bottom_bar?.submit_label || 'ارسال' });
+    } else {
+      buttons.push({ action: 'next', label: zones.bottom_bar?.next_label || 'بعدی' });
+    }
+  }
+
+  const showWatermark = Boolean(form.branding.forceLicense);
+  const bottomNavVisible = !submitted && buttons.length > 0;
+  const bottomBarVisible = !submitted && (Boolean(zones.bottom_bar) || bottomNavVisible);
   const previous = () => {
     if (busy || submitted) return;
     const target = visiblePages[pageIndex - 1];
@@ -584,13 +588,43 @@ export function PublicFormClient({
     <>
       {errorItems.length > 1 && <ErrorSummary items={errorItems} focusKey={errorFocusKey} />}
       {currentItems.length === 0 && page.kind === 'main' && <p className="text-center text-sm text-muted-foreground">در این صفحه پرسشی برای نمایش وجود ندارد.</p>}
-      {currentItems.map((item) => (
-        <section key={item.item_id} className="bg-card/90 p-5 text-card-foreground shadow-sm ring-1 ring-border" style={{ borderRadius: radiusCss(theme.radius) }}>
-          {item.kind === 'field'
-            ? <FieldInput field={item} value={answersRaw[item.field_id]} color={theme.primary_color} error={fieldErrors[item.field_id]} onChange={(value) => setAnswersRaw((previous) => ({ ...previous, [item.field_id]: value }))} />
-            : <ContentItem item={item} />}
-        </section>
-      ))}
+      <div
+        className={cn(
+          'grid gap-4',
+          definition!.layout?.main_columns === 2 ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-1',
+        )}
+      >
+        {currentItems.map((item) => {
+          const colSpan =
+            item.kind === 'field' && (item.settings as Record<string, unknown>)?.col_span === 2
+              ? 'col-span-1 md:col-span-2'
+              : 'col-span-1';
+          return (
+            <section
+              key={item.item_id}
+              className={cn(
+                'bg-card/90 p-5 text-card-foreground shadow-sm ring-1 ring-border',
+                definition!.layout?.main_columns === 2 && colSpan,
+              )}
+              style={{ borderRadius: radiusCss(theme.radius) }}
+            >
+              {item.kind === 'field' ? (
+                <FieldInput
+                  field={item}
+                  value={answersRaw[item.field_id]}
+                  color={theme.primary_color}
+                  error={fieldErrors[item.field_id]}
+                  onChange={(value) =>
+                    setAnswersRaw((previous) => ({ ...previous, [item.field_id]: value }))
+                  }
+                />
+              ) : (
+                <ContentItem item={item} />
+              )}
+            </section>
+          );
+        })}
+      </div>
       {submitError && <p role="alert" className="rounded-lg bg-destructive-surface px-4 py-3 text-sm text-destructive-ink">{submitError}</p>}
     </>
   );
@@ -608,21 +642,44 @@ export function PublicFormClient({
       <div className="relative z-10 mx-auto flex w-full max-w-160 flex-col gap-4">
         <header
           data-area="header"
-          data-sticky={definition!.layout.header_sticky ? 'true' : undefined}
+          data-sticky={definition!.layout?.header_sticky ? 'true' : undefined}
           className={cn(
             'overflow-hidden bg-card text-card-foreground shadow-sm ring-1 ring-border',
-            definition!.layout.header_sticky && 'sticky top-0 z-20 bg-card/90 backdrop-blur',
+            definition!.layout?.header_sticky && 'sticky top-0 z-20 bg-card/90 backdrop-blur',
           )}
           style={{ borderRadius: radiusCss(theme.radius) }}
         >
           <div className="h-2" style={{ backgroundColor: theme.primary_color }} />
           <div className="flex flex-col gap-2 px-5 py-5">
+            {zones.header && (zones.header.logo_url || zones.header.brand_title || zones.header.brand_subtitle) ? (
+              <div className="mb-2">
+                <LogoTitle
+                  value={{
+                    title: zones.header.brand_title,
+                    subtitle: zones.header.brand_subtitle,
+                    logo_url: zones.header.logo_url,
+                    align: 'start',
+                    visible: true,
+                    show_logo: Boolean(zones.header.logo_url),
+                    show_title: Boolean(zones.header.brand_title),
+                    show_subtitle: Boolean(zones.header.brand_subtitle),
+                  }}
+                  formTitle={form.title}
+                />
+              </div>
+            ) : null}
             <h1 className="text-2xl font-bold">{form.title}</h1>
             {page.title && <p className="text-sm text-muted-foreground">{page.title}</p>}
             {page.kind === 'main' && visibleMainPages.length > 1 && (
               <div className="mt-2 flex items-center gap-3 text-xs text-muted-foreground">
                 <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-muted">
-                  <div className="h-full rounded-full" style={{ width: `${((mainPageIndex + 1) / visibleMainPages.length) * 100}%`, backgroundColor: theme.primary_color }} />
+                  <div
+                    className="h-full rounded-full"
+                    style={{
+                      width: `${((mainPageIndex + 1) / visibleMainPages.length) * 100}%`,
+                      backgroundColor: theme.primary_color,
+                    }}
+                  />
                 </div>
                 صفحه‌ی {fa(mainPageIndex + 1)} از {fa(visibleMainPages.length)}
               </div>
@@ -630,16 +687,21 @@ export function PublicFormClient({
           </div>
         </header>
 
-        {chrome.header.length > 0 && (!submitted || page.kind === 'ending') && (
-          <ChromeArea elements={chrome.header} definition={definition!} page={page} title={form.title} answers={result!.evaluated.answers} startedAt={startedAt} now={now} onAction={onAction} />
-        )}
-        {topBarElements.length > 0 && (!submitted || page.kind === 'ending') && (
-          <div data-area="topBar" className="rounded-lg bg-card/80 p-2 shadow-sm ring-1 ring-border">
-            <ChromeArea elements={topBarElements} definition={definition!} page={page} title={form.title} answers={result!.evaluated.answers} startedAt={startedAt} now={now} onAction={onAction} />
+        {zones.top_bar && (!submitted || page.kind === 'ending') && (
+          <div data-area="topBar" className="rounded-lg bg-card/80 p-3 shadow-sm ring-1 ring-border text-sm flex flex-col gap-2">
+            {zones.top_bar.notice_text ? (
+              <div className="flex items-center gap-2 text-primary">
+                <InfoIcon className="size-4 shrink-0" />
+                <span>{zones.top_bar.notice_text}</span>
+              </div>
+            ) : null}
+            {zones.top_bar.description ? (
+              <p className="text-muted-foreground">{zones.top_bar.description}</p>
+            ) : null}
           </div>
         )}
 
-        <div className={cn('grid gap-4', sidebarElements.length > 0 && 'lg:grid-cols-[minmax(0,1fr)_16rem]')}>
+        <div className={cn('grid gap-4', zones.sidebar && page.kind === 'main' && 'lg:grid-cols-[minmax(0,1fr)_16rem]')}>
           <form className="flex min-w-0 flex-col gap-4" onSubmit={(event) => { event.preventDefault(); next(); }}>
             <div aria-hidden="true" className="absolute -left-[10000px] size-px overflow-hidden">
               <label htmlFor="website">وب‌سایت</label>
@@ -647,9 +709,30 @@ export function PublicFormClient({
             </div>
             {body}
           </form>
-          {sidebarElements.length > 0 && (!submitted || page.kind === 'ending') && (
-            <aside data-area="sidebar" className="rounded-lg bg-card/80 p-3 shadow-sm ring-1 ring-border">
-              <ChromeArea elements={sidebarElements} definition={definition!} page={page} title={form.title} answers={result!.evaluated.answers} startedAt={startedAt} now={now} onAction={onAction} />
+          {zones.sidebar && page.kind === 'main' && !submitted && (
+            <aside data-area="sidebar" className="rounded-lg bg-card/80 p-3 shadow-sm ring-1 ring-border flex flex-col gap-3">
+              {zones.sidebar.title ? <h3 className="text-sm font-semibold">{zones.sidebar.title}</h3> : null}
+              {visiblePages.length > 1 && (
+                <nav className="flex flex-col gap-1 text-xs">
+                  {visiblePages.map((p, idx) => (
+                    <button
+                      key={p.page_id}
+                      type="button"
+                      disabled={busy}
+                      onClick={() => setPageId(p.page_id)}
+                      className={cn(
+                        'flex items-center justify-between rounded px-2 py-1.5 text-right transition-colors',
+                        p.page_id === page.page_id
+                          ? 'bg-primary/10 font-bold text-primary'
+                          : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground',
+                      )}
+                    >
+                      <span>{p.title || `صفحه ${fa(idx + 1)}`}</span>
+                      {p.page_id === page.page_id && <span className="size-1.5 rounded-full bg-primary" />}
+                    </button>
+                  ))}
+                </nav>
+              )}
             </aside>
           )}
         </div>
@@ -657,21 +740,12 @@ export function PublicFormClient({
         {bottomBarVisible && (
           <div
             data-area="bottomBar"
-            data-fixed={definition!.layout.bottom_bar_fixed ? 'true' : 'false'}
-            className={cn('w-full', !definition!.layout.bottom_bar_fixed && 'rounded-lg bg-card/80 p-3 shadow-sm ring-1 ring-border')}
+            data-fixed={definition!.layout?.bottom_bar_fixed ? 'true' : 'false'}
+            className={cn('w-full', !definition!.layout?.bottom_bar_fixed && 'rounded-lg bg-card/80 p-3 shadow-sm ring-1 ring-border')}
           >
-            {bottomBarElements.length > 0 && (
-              <ChromeArea elements={bottomBarElements} definition={definition!} page={page} title={form.title} answers={result!.evaluated.answers} startedAt={startedAt} now={now} onAction={onAction} />
-            )}
             {bottomNavVisible && (
               <BottomNav
-                elements={bottomNav}
-                definition={definition!}
-                page={page}
-                title={form.title}
-                answers={result!.evaluated.answers}
-                startedAt={startedAt}
-                now={now}
+                buttons={buttons}
                 theme={theme}
                 busy={busy}
                 onAction={onAction}
@@ -680,9 +754,9 @@ export function PublicFormClient({
           </div>
         )}
 
-        {footerElements.length > 0 && (!submitted || page.kind === 'ending') && (
-          <div data-area="footer">
-            <ChromeArea elements={footerElements} definition={definition!} page={page} title={form.title} answers={result!.evaluated.answers} startedAt={startedAt} now={now} onAction={onAction} />
+        {zones.footer && zones.footer.text && (!submitted || page.kind === 'ending') && (
+          <div data-area="footer" className="text-center text-xs text-muted-foreground py-2">
+            <p>{zones.footer.text}</p>
           </div>
         )}
       </div>

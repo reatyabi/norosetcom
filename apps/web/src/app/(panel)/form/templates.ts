@@ -172,9 +172,14 @@ const random = (max: number) => Math.floor(Math.random() * max);
 const id = (kind: IdKind, gen: (max: number) => number) => generateId(kind, gen);
 
 function settingsOf(spec: FieldSpec): Raw {
-  if (spec.options) return { options: spec.options.map((label, i) => ({ value: `o${i + 1}`, label })) };
-  if (spec.max !== undefined) return { max: spec.max };
-  return {};
+  const base: Raw = {
+    col_span: spec.type === 'long_text' ? 2 : 1,
+    text_align: 'right',
+    placeholder: '',
+  };
+  if (spec.options) base.options = spec.options.map((label, i) => ({ value: `o${i + 1}`, label }));
+  if (spec.max !== undefined) base.max = spec.max;
+  return base;
 }
 
 /** تعریف خام فرم از قالب (یک صفحه‌ی main)؛ `gen` برای شناسه‌ها (تست: قطعی). */
@@ -182,6 +187,29 @@ export function templateDefinition(template: FormTemplate, gen: (max: number) =>
   return {
     version_schema: 1,
     theme: { primary_color: template.primaryColor, background_color: template.backgroundColor },
+    layout: {
+      header_sticky: false,
+      bottom_bar_fixed: true,
+      sidebar_collapsible: true,
+      sidebar_collapsed: false,
+      main_columns: 1,
+      zones: { header: true, top_bar: true, sidebar: true, bottom_bar: true, footer: true },
+    },
+    defaults: {
+      header: {
+        logo_url: '',
+        brand_title: '',
+        brand_subtitle: '',
+        align: 'start',
+        show_logo: true,
+        show_title: true,
+        show_subtitle: true,
+      },
+      top_bar: { mode: 'progress', description: '', notice_text: 'لطفاً تمامی موارد را با دقت مطالعه و تکمیل فرمایید.' },
+      sidebar: { title: 'مراحل فرم' },
+      bottom_bar: { prev_label: 'مرحله قبلی', next_label: 'مرحله بعدی', submit_label: 'ثبت و ارسال' },
+      footer: { text: 'این فرم با نوروست طراحی شده است.', show_branding: true },
+    },
     pages: [
       {
         page_id: id('page', gen),

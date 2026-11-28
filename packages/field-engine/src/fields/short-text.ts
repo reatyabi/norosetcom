@@ -1,7 +1,7 @@
 import { shortTextValue } from '../values';
-import { defineField, placeholder } from './shared';
+import { defineField, baseDisplay1 } from './shared';
 
 export const shortTextField = defineField(shortTextValue, {
-  display: { placeholder },
+  display: { ...baseDisplay1 },
   conditionOps: ['eq', 'neq', 'contains', 'is_empty'],
 });

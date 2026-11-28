@@ -2,8 +2,8 @@
 
 import { useState, type CSSProperties } from 'react';
 import { ChevronDownIcon, PaletteIcon, XIcon } from 'lucide-react';
-import { type FormTheme } from '@noroset/field-engine';
-import { Button, cn, NativeSelect, NativeSelectOption, Segmented, Skeleton } from '@noroset/ui';
+import { type FormLayout, type FormTheme, FORM_THEME_PRESET_DEFINITIONS } from '@noroset/field-engine';
+import { Button, cn, NativeSelect, NativeSelectOption, Segmented, Skeleton, Switch } from '@noroset/ui';
 import { hoverNativeScroll, IconAction } from '@/components/editor-ui';
 import { FORM_THEME_PRESETS } from '@noroset/noroform/ui';
 import { BackgroundDialog } from './background-dialog';
@@ -42,6 +42,17 @@ const RADII: { value: FormTheme['radius']; label: string; radius: string }[] = [
   { value: 'full', label: 'گرد', radius: '999px' },
 ];
 
+export interface ThemePanelProps {
+  loading: boolean;
+  theme: FormTheme;
+  tenantId: string;
+  onChange: (theme: FormTheme) => void;
+  onClose: () => void;
+  className?: string;
+  layout?: FormLayout;
+  onLayoutChange?: (patch: Partial<FormLayout>) => void;
+}
+
 export function ThemePanel({
   loading,
   theme,
@@ -49,14 +60,9 @@ export function ThemePanel({
   onChange,
   onClose,
   className,
-}: {
-  loading: boolean;
-  theme: FormTheme;
-  tenantId: string;
-  onChange: (theme: FormTheme) => void;
-  onClose: () => void;
-  className?: string;
-}) {
+  layout,
+  onLayoutChange,
+}: ThemePanelProps) {
   const [customOpen, setCustomOpen] = useState(false);
   const [backgroundOpen, setBackgroundOpen] = useState(false);
   const pickedPreset = FORM_THEME_PRESETS.find((preset) => preset.id === theme.preset);
@@ -105,6 +111,16 @@ export function ThemePanel({
             <div className="grid grid-cols-3 gap-2 p-0.5">
               {FORM_THEME_PRESETS.map((preset) => {
                 const active = theme.preset === preset.id;
+                const def = FORM_THEME_PRESET_DEFINITIONS[preset.id];
+                const cardTokens = def?.defaultTokens ?? {
+                  '--nf-canvas-bg': preset.theme.background_color,
+                  '--nf-card-bg': 'var(--card)',
+                  '--nf-border': 'var(--border)',
+                  '--nf-shadow-card': 'none',
+                  '--nf-primary': preset.theme.primary_color,
+                  '--nf-card-fg': 'var(--card-foreground)',
+                };
+
                 return (
                   <button
                     key={preset.id}
@@ -114,31 +130,41 @@ export function ThemePanel({
                     aria-pressed={active}
                     onClick={() => onChange({ ...preset.theme })}
                     className={cn(
-                      'flex aspect-[16/10] items-center gap-1.5 overflow-hidden rounded-md px-2 outline-none ring-1 ring-offset-2 ring-offset-card transition-[box-shadow,transform] duration-150 ease-fluent hover:scale-[1.03] focus-visible:ring-2 focus-visible:ring-ring',
-                      active ? 'ring-2 ring-foreground' : 'ring-border hover:ring-foreground/40',
+                      'group/tile relative flex aspect-[16/11] flex-col justify-between overflow-hidden rounded-lg p-2 outline-none ring-1 ring-offset-2 ring-offset-card transition-[box-shadow,transform] duration-150 ease-fluent hover:scale-[1.03] focus-visible:ring-2 focus-visible:ring-ring cursor-pointer',
+                      active ? 'ring-2 ring-foreground shadow-sm' : 'ring-border hover:ring-foreground/40',
                     )}
-                    style={{ background: preset.theme.background_color }}
+                    style={{ background: cardTokens['--nf-canvas-bg'] }}
                   >
+                    {/* کارت مینیاتوری شبیه‌ساز بوم واقعی */}
+                    <div
+                      className="w-full flex-1 flex flex-col justify-between p-1.5 transition-transform group-hover/tile:scale-[1.02]"
+                      style={{
+                        background: cardTokens['--nf-card-bg'],
+                        border: `1px solid ${cardTokens['--nf-border']}`,
+                        boxShadow: cardTokens['--nf-shadow-card'],
+                        borderRadius: preset.theme.radius === 'none' ? '0px' : preset.theme.radius === 'full' ? '6px' : '4px',
+                      }}
+                    >
+                      <div className="flex items-center gap-1">
+                        <span className="size-1.5 rounded-full shrink-0" style={{ background: cardTokens['--nf-primary'] }} />
+                        <span className="h-1 w-2/3 rounded-full opacity-60" style={{ background: cardTokens['--nf-card-fg'] }} />
+                      </div>
+                      <div className="flex flex-col gap-0.5">
+                        <span className="h-0.5 w-full rounded-full opacity-25" style={{ background: cardTokens['--nf-card-fg'] }} />
+                        <span className="h-0.5 w-4/5 rounded-full opacity-25" style={{ background: cardTokens['--nf-card-fg'] }} />
+                      </div>
+                      <div
+                        className="h-2 w-1/2 self-end rounded-xs"
+                        style={{
+                          background: cardTokens['--nf-primary'],
+                          borderRadius: preset.theme.radius === 'full' ? '999px' : '2px',
+                        }}
+                      />
+                    </div>
                     <span
-                      className="size-3 shrink-0 rounded-full"
-                      style={{ background: `${preset.theme.primary_color}66` }}
-                    />
-                    <span className="flex min-w-0 flex-1 flex-col gap-1">
-                      <span className="h-0.5 w-2/3 rounded-full" style={{ background: preset.theme.primary_color }} />
-                      <span
-                        className="h-1.5 w-full"
-                        style={{
-                          background: preset.theme.primary_color,
-                          borderRadius: RADII.find((radius) => radius.value === preset.theme.radius)?.radius,
-                        }}
-                      />
-                      <span
-                        className="h-1.5 w-full opacity-50"
-                        style={{
-                          background: preset.theme.primary_color,
-                          borderRadius: RADII.find((radius) => radius.value === preset.theme.radius)?.radius,
-                        }}
-                      />
+                      className="mt-1 text-[10px] font-semibold text-center truncate text-foreground"
+                    >
+                      {preset.label}
                     </span>
                   </button>
                 );
@@ -237,7 +263,7 @@ export function ThemePanel({
                 </div>
 
                 <div className="flex flex-col gap-1.5">
-                  <span className="text-xs text-muted-foreground">اندازه‌ی متن</span>
+                  <span className="text-xs text-muted-foreground">اندازه‌ی فرم و فیلدها</span>
                   <Segmented
                     value={theme.text_size}
                     onChange={(text_size) => patch({ text_size })}
@@ -259,6 +285,107 @@ export function ThemePanel({
               </div>
             )}
           </div>
+
+          {/* چیدمان و نواحی فرم */}
+          {layout && onLayoutChange && (
+            <div className="flex flex-col gap-3 rounded-lg border border-border p-3">
+              <span className="text-xs font-semibold text-foreground">چیدمان و نواحی ۶ گانه</span>
+
+              <div className="flex flex-col gap-1.5">
+                <span className="text-[11px] text-muted-foreground">ستون‌های بدنه فرم</span>
+                <Segmented
+                  value={String(layout.main_columns ?? 1)}
+                  onChange={(v) => onLayoutChange({ main_columns: Number(v) as 1 | 2 })}
+                  items={[
+                    { value: '1', label: 'تک ستونه' },
+                    { value: '2', label: 'دو ستونه' },
+                  ]}
+                />
+              </div>
+
+              <div className="flex flex-col gap-2 pt-2 border-t border-border/50 text-xs">
+                <span className="text-[11px] font-medium text-muted-foreground">نواحی فعال فرم</span>
+
+                <label className="flex items-center justify-between gap-2 cursor-pointer">
+                  <span>هدر برند و لوگو</span>
+                  <Switch
+                    checked={layout.zones?.header ?? true}
+                    onCheckedChange={(checked) =>
+                      onLayoutChange({ zones: { ...layout.zones, header: checked } })
+                    }
+                  />
+                </label>
+
+                <label className="flex items-center justify-between gap-2 cursor-pointer">
+                  <span>نوار بالای فرم (TopBar)</span>
+                  <Switch
+                    checked={layout.zones?.top_bar ?? true}
+                    onCheckedChange={(checked) =>
+                      onLayoutChange({ zones: { ...layout.zones, top_bar: checked } })
+                    }
+                  />
+                </label>
+
+                <label className="flex items-center justify-between gap-2 cursor-pointer">
+                  <span>نوار کناری (Sidebar)</span>
+                  <Switch
+                    checked={layout.zones?.sidebar ?? true}
+                    onCheckedChange={(checked) =>
+                      onLayoutChange({ zones: { ...layout.zones, sidebar: checked } })
+                    }
+                  />
+                </label>
+
+                <label className="flex items-center justify-between gap-2 cursor-pointer">
+                  <span>نوار پایین دکمه‌ها (BottomBar)</span>
+                  <Switch
+                    checked={layout.zones?.bottom_bar ?? true}
+                    onCheckedChange={(checked) =>
+                      onLayoutChange({ zones: { ...layout.zones, bottom_bar: checked } })
+                    }
+                  />
+                </label>
+
+                <label className="flex items-center justify-between gap-2 cursor-pointer">
+                  <span>فوتر فرم</span>
+                  <Switch
+                    checked={layout.zones?.footer ?? true}
+                    onCheckedChange={(checked) =>
+                      onLayoutChange({ zones: { ...layout.zones, footer: checked } })
+                    }
+                  />
+                </label>
+              </div>
+
+              <div className="flex flex-col gap-2 pt-2 border-t border-border/50 text-xs">
+                <span className="text-[11px] font-medium text-muted-foreground">رفتار نواحی</span>
+
+                <label className="flex items-center justify-between gap-2 cursor-pointer">
+                  <span>هدر چسبان (Sticky)</span>
+                  <Switch
+                    checked={layout.header_sticky ?? false}
+                    onCheckedChange={(checked) => onLayoutChange({ header_sticky: checked })}
+                  />
+                </label>
+
+                <label className="flex items-center justify-between gap-2 cursor-pointer">
+                  <span>نوار پایین چسبان</span>
+                  <Switch
+                    checked={layout.bottom_bar_fixed ?? false}
+                    onCheckedChange={(checked) => onLayoutChange({ bottom_bar_fixed: checked })}
+                  />
+                </label>
+
+                <label className="flex items-center justify-between gap-2 cursor-pointer">
+                  <span>سایدبار تاشو</span>
+                  <Switch
+                    checked={layout.sidebar_collapsible ?? true}
+                    onCheckedChange={(checked) => onLayoutChange({ sidebar_collapsible: checked })}
+                  />
+                </label>
+              </div>
+            </div>
+          )}
         </>
       )}
       {backgroundOpen && (
@@ -317,9 +444,9 @@ function buttonSampleStyle(style: FormTheme['button_style'], theme: FormTheme): 
       return { background: `${theme.primary_color}32`, color: theme.primary_color, borderRadius: radius };
     case 'glass':
       return {
-        background: 'color-mix(in srgb,#ffffff 24%,transparent)',
-        boxShadow: 'inset 0 0 0 1px color-mix(in srgb,#000000 18%,transparent)',
-        color: '#222222',
+        background: 'color-mix(in srgb, var(--card) 60%, transparent)',
+        boxShadow: 'inset 0 0 0 1px var(--border)',
+        color: 'var(--card-foreground)',
         borderRadius: radius,
         backdropFilter: 'blur(6px)',
       };
@@ -327,7 +454,7 @@ function buttonSampleStyle(style: FormTheme['button_style'], theme: FormTheme): 
       return {
         background: theme.primary_color,
         color: readableInk(theme.primary_color),
-        boxShadow: `inset 0 0 0 1.5px #111, 2px 2px 0 #111`,
+        boxShadow: `inset 0 0 0 1.5px var(--border), 2px 2px 0 var(--border)`,
         borderRadius: radius,
       };
   }
@@ -336,5 +463,5 @@ function buttonSampleStyle(style: FormTheme['button_style'], theme: FormTheme): 
 function readableInk(color: string): string {
   const rgb = color.slice(1).match(/.{2}/g)?.map((part) => parseInt(part, 16)) ?? [0, 0, 0];
   const luminance = (0.2126 * rgb[0]! + 0.7152 * rgb[1]! + 0.0722 * rgb[2]!) / 255;
-  return luminance > 0.56 ? '#111111' : '#ffffff';
+  return luminance > 0.56 ? 'var(--foreground)' : '#ffffff';
 }

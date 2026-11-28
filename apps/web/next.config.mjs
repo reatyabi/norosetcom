@@ -8,6 +8,9 @@ const PUBLIC_HOST = process.env.PUBLIC_HOST ?? 'n8l.localhost';
 const NOROFORM_PUBLIC_HOST = process.env.NOROFORM_PUBLIC_HOST ?? 'n8f.localhost';
 
 const nextConfig = {
+  experimental: {
+    agentUpgrade: false,
+  },
   transpilePackages: ['@noroset/ui', '@noroset/noroform', '@noroset/norolink', '@noroset/norofile', '@noroset/admin', '@noroset/blog'],
   // دامنه‌های عمومی برای ساخت آدرس در پنل (مرورگر env سرور را نمی‌بیند).
   env: { NOROSET_PUBLIC_HOST: PUBLIC_HOST, NOROSET_NOROFORM_HOST: NOROFORM_PUBLIC_HOST },

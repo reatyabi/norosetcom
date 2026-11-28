@@ -38,6 +38,7 @@ export function FormRichText({
   label,
   placeholder,
   headings = true,
+  subtle = false,
   className,
 }: {
   value: unknown;
@@ -46,6 +47,8 @@ export function FormRichText({
   placeholder: string;
   /** راهنمای پرسش تیتر ندارد. */
   headings?: boolean;
+  /** استایل ظریف بدون خط زیرین دائمی برای متن راهنما */
+  subtle?: boolean;
   /** کلاس متن (مثلاً رنگ کم‌رنگ راهنما). */
   className?: string;
 }) {
@@ -112,7 +115,12 @@ export function FormRichText({
       className="flex flex-col"
     >
       <div
-        className="form-rich border-b border-b-foreground/20 pt-1 pb-1.5 transition-colors duration-150 ease-fluent hover:border-b-foreground/40 focus-within:border-b-2 focus-within:border-b-primary focus-within:pb-[5px]"
+        className={cn(
+          'form-rich pt-1 pb-1.5 transition-colors duration-150 ease-fluent',
+          subtle
+            ? 'rounded-md border border-transparent px-1.5 hover:border-nf-border/40 focus-within:border-nf-primary/60 focus-within:bg-nf-card/50'
+            : 'border-b border-b-foreground/20 hover:border-b-foreground/40 focus-within:border-b-2 focus-within:border-b-primary focus-within:pb-[5px]',
+        )}
       >
         <EditorContent editor={editor} />
       </div>

@@ -1,6 +1,19 @@
-import { formThemeSchema, richTextSchema, type FormTheme } from '@noroset/field-engine';
+import {
+  formDefaultsSchema,
+  formLayoutSchema,
+  formThemeSchema,
+  richTextSchema,
+  type FormDefaults,
+  type FormLayout,
+  type FormTheme,
+} from '@noroset/field-engine';
 import { isBasicElementType } from './settings-spec';
-import { EMPTY_HEADER_LOGO, newId, type EditorCondition, type EditorField, type EditorPage, type HeaderAlign, type HeaderLogo } from './types';
+import {
+  newId,
+  type EditorCondition,
+  type EditorField,
+  type EditorPage,
+} from './types';
 
 type JsonObject = Record<string, unknown>;
 
@@ -66,8 +79,10 @@ function readField(value: unknown): EditorField {
   }
   const type = value.type;
   const family = value.kind;
-  if ((family === 'field' && ['text', 'image', 'video'].includes(type)) ||
-      (family === 'content' && !['text', 'image', 'video'].includes(type))) {
+  if (
+    (family === 'field' && ['text', 'image', 'video'].includes(type)) ||
+    (family === 'content' && !['text', 'image', 'video'].includes(type))
+  ) {
     throw new Error('نوع و دسته‌ی یکی از المان‌های پیش‌نویس با هم سازگار نیستند.');
   }
   if (value.settings !== undefined && !isObject(value.settings)) {
@@ -106,85 +121,12 @@ function readField(value: unknown): EditorField {
   };
 }
 
-/** عناصر هدر پیش‌فرض (`defaults.header.elements`). */
-function headerElements(source: JsonObject): JsonObject[] {
-  const defaults = isObject(source.defaults) ? source.defaults : {};
-  const header = isObject(defaults.header) ? defaults.header : {};
-  return Array.isArray(header.elements) ? (header.elements as JsonObject[]) : [];
-}
-
-function readHeaderLogo(source: JsonObject): HeaderLogo {
-  const el = headerElements(source).find((e) => e.type === 'logo_title');
-  if (!el) return { ...EMPTY_HEADER_LOGO };
-  const settings = isObject(el.settings) ? el.settings : {};
-  const align: HeaderAlign =
-    settings.align === 'center' || settings.align === 'end' ? settings.align : 'start';
-  return {
-    title: typeof settings.title === 'string' ? settings.title : '',
-    subtitle: typeof settings.subtitle === 'string' ? settings.subtitle : '',
-    logo_url: typeof settings.logo_url === 'string' ? settings.logo_url : '',
-    align,
-    visible: settings.visible !== false,
-    show_logo: settings.show_logo !== false,
-    show_title: settings.show_title !== false,
-    show_subtitle: settings.show_subtitle !== false,
-  };
-}
-
-/** چسبیدن هدر از layout سطح فرم خوانده می‌شود. */
-function readHeaderSticky(source: JsonObject): boolean {
-  const layout = isObject(source.layout) ? source.layout : {};
-  return layout.header_sticky === true;
-}
-
-/** لوگو را در `defaults.header.elements` می‌نویسد؛ وقتی چیزی برای نوشتن/حذف نیست دست نمی‌زند. */
-function applyHeaderLogo(source: JsonObject, logo: HeaderLogo): JsonObject {
-  const defaults = isObject(source.defaults) ? source.defaults : {};
-  const header = isObject(defaults.header) ? defaults.header : {};
-  const elements = Array.isArray(header.elements) ? [...(header.elements as JsonObject[])] : [];
-  const idx = elements.findIndex((e) => e.type === 'logo_title');
-  const existing = idx >= 0;
-  const hasContent = logo.title.trim() !== '' || logo.subtitle.trim() !== '' || logo.logo_url.trim() !== '';
-  // المان خالی ساخته نمی‌شود؛ فقط یک المان موجودِ عمداً مخفی حفظ می‌شود.
-  const has = hasContent || (existing && !logo.visible);
-
-  if (!has) {
-    if (!existing) return source;
-    return { ...source, defaults: { ...defaults, header: { ...header, elements: elements.filter((e) => e.type !== 'logo_title') } } };
-  }
-
-  const current = existing && isObject(elements[idx]!.settings) ? (elements[idx]!.settings as JsonObject) : {};
-  const settings: JsonObject = { ...current, title: logo.title, logo_url: logo.logo_url };
-  // فقط مقادیر غیرپیش‌فرض یا کلیدهای موجود را می‌نویسیم تا تعریف‌های قدیمی بدون تغییر round-trip شوند.
-  const put = (key: keyof HeaderLogo, value: unknown, fallback: unknown) => {
-    if (value !== fallback || current[key] !== undefined) settings[key] = value;
-  };
-  put('subtitle', logo.subtitle, '');
-  put('align', logo.align, 'start');
-  put('visible', logo.visible, true);
-  put('show_logo', logo.show_logo, true);
-  put('show_title', logo.show_title, true);
-  put('show_subtitle', logo.show_subtitle, true);
-
-  const item_id = existing && typeof elements[idx]!.item_id === 'string' ? elements[idx]!.item_id : newId('item');
-  const element: JsonObject = { kind: 'chrome', item_id, type: 'logo_title', settings };
-  const next = existing ? elements.map((e, i) => (i === idx ? element : e)) : [...elements, element];
-  return { ...source, defaults: { ...defaults, header: { ...header, elements: next } } };
-}
-
-/** sticky فقط وقتی نوشته می‌شود که روشن باشد یا از قبل در layout وجود داشته باشد. */
-function applyHeaderSticky(source: JsonObject, sticky: boolean): JsonObject {
-  const layout = isObject(source.layout) ? source.layout : {};
-  if (layout.header_sticky === undefined && !sticky) return source;
-  return { ...source, layout: { ...layout, header_sticky: sticky } };
-}
-
 export function readEditorDocument(value: unknown): {
   source: JsonObject;
   pages: EditorPage[];
   theme: FormTheme;
-  headerLogo: HeaderLogo;
-  headerSticky: boolean;
+  layout: FormLayout;
+  defaults: FormDefaults;
 } {
   if (!isObject(value) || !Array.isArray(value.pages) || value.pages.length === 0) {
     throw new Error('ساختار صفحه‌های پیش‌نویس قابل ویرایش نیست.');
@@ -225,14 +167,25 @@ export function readEditorDocument(value: unknown): {
       const paths = error.issues
         .map((issue: { path?: unknown }) => (Array.isArray(issue.path) ? issue.path.join('.') : ''))
         .filter(Boolean);
-      throw new Error(paths.length
-        ? `تنظیمات قالب فرم معتبر نیست (${[...new Set(paths)].join('، ')}).`
-        : 'تنظیمات قالب فرم معتبر نیست.');
+      throw new Error(
+        paths.length
+          ? `تنظیمات قالب فرم معتبر نیست (${[...new Set(paths)].join('، ')}).`
+          : 'تنظیمات قالب فرم معتبر نیست.',
+      );
     }
     throw error;
   }
 
-  return { source: structuredClone(value), pages, theme, headerLogo: readHeaderLogo(value), headerSticky: readHeaderSticky(value) };
+  const layout: FormLayout = formLayoutSchema.parse(isObject(value.layout) ? value.layout : {});
+  const defaults: FormDefaults = formDefaultsSchema.parse(isObject(value.defaults) ? value.defaults : {});
+
+  return {
+    source: structuredClone(value),
+    pages,
+    theme,
+    layout,
+    defaults,
+  };
 }
 
 export function writeEditorDocument(
@@ -240,14 +193,28 @@ export function writeEditorDocument(
   pages: readonly EditorPage[],
   theme: FormTheme,
   themeDirty: boolean,
-  headerLogo: HeaderLogo = { ...EMPTY_HEADER_LOGO },
-  headerSticky = false,
+  layout?: FormLayout,
+  defaults?: FormDefaults,
 ): JsonObject {
-  const base = applyHeaderLogo(structuredClone(source), headerLogo);
-  const originalTheme = isObject(base.theme) ? base.theme : {};
+  const currentDefaults: FormDefaults = defaults
+    ? structuredClone(defaults)
+    : formDefaultsSchema.parse(isObject(source.defaults) ? source.defaults : {});
+  const currentLayout: FormLayout = layout
+    ? structuredClone(layout)
+    : formLayoutSchema.parse(isObject(source.layout) ? source.layout : {});
+
+  const shouldIncludeLayout = source.layout !== undefined || layout !== undefined;
+  const shouldIncludeDefaults = source.defaults !== undefined || defaults !== undefined;
+
+  const originalTheme = isObject(source.theme) ? source.theme : {};
+  const shouldIncludeTheme = source.theme !== undefined || themeDirty;
+
   const next: JsonObject = {
-    ...base,
-    ...(themeDirty ? { theme: { ...originalTheme, ...theme } } : {}),
+    ...source,
+    version_schema: 1,
+    ...(shouldIncludeTheme ? { theme: themeDirty ? { ...originalTheme, ...theme } : source.theme } : {}),
+    ...(shouldIncludeLayout ? { layout: currentLayout } : {}),
+    ...(shouldIncludeDefaults ? { defaults: currentDefaults } : {}),
     pages: pages.map((page) => {
       const originalBody = isObject(page.source.body) ? page.source.body : {};
       const newPage = Object.keys(page.source).length === 0;
@@ -304,5 +271,5 @@ export function writeEditorDocument(
       };
     }),
   };
-  return applyHeaderSticky(next, headerSticky);
+  return next;
 }

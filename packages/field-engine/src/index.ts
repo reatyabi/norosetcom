@@ -3,6 +3,7 @@
 
 export * from './contract';
 export * from './schema';
+export * from './theme';
 export { LIMITS } from './limits';
 export { ID_PATTERNS, generateId, type IdKind } from './ids';
 export { isHttpsUrl, toAsciiDigits } from './text';
@@ -39,15 +40,8 @@ export {
   type Answers,
 } from './conditions';
 export {
-  SYNTHETIC_IDS,
-  applyBranding,
-  ensureNavigation,
-  resolveBottomBar,
-  resolveFooter,
-  resolveHeader,
-  resolvePageChrome,
-  resolveSidebar,
-  resolveTopBar,
+  resolveZones,
+  type ResolvedZones,
 } from './layout';
 export {
   validateDefinition,

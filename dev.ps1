@@ -9,6 +9,7 @@
 param([switch]$Stop, [switch]$Reset, [switch]$Seed, [switch]$Logs)
 
 $ErrorActionPreference = 'Stop'
+$env:Path = "C:\pgsql\bin;C:\nodejs;C:\git\cmd;$env:Path"
 $Root    = $PSScriptRoot
 $LogDir  = Join-Path $Root '.logs'
 $ApiLog  = Join-Path $LogDir 'api.log'
@@ -51,13 +52,33 @@ function Kill-Port { param([int]$Port)
 }
 
 function Assert-Docker {
+    $pgPort = if ($env:PORT_PG) { $env:PORT_PG } else { 5433 }
+    pg_isready.exe -p $pgPort -q 2>$null
+    if ($LASTEXITCODE -eq 0) {
+        Write-Ok "PostgreSQL is running natively on port $pgPort"
+        return
+    }
     docker info 2>$null | Out-Null
-    if ($LASTEXITCODE -ne 0) { Fail "Docker is not running -- open Docker Desktop" }
+    if ($LASTEXITCODE -ne 0) { Fail "Neither native PostgreSQL on port $pgPort nor Docker is running -- open Docker Desktop or start PostgreSQL" }
     Write-Ok "Docker is running"
 }
 
 function Start-Postgres {
     Write-Title "PostgreSQL"
+    $pgPort = if ($env:PORT_PG) { $env:PORT_PG } else { 5433 }
+    pg_isready.exe -p $pgPort -q 2>$null
+    if ($LASTEXITCODE -eq 0) {
+        Write-Ok "PostgreSQL already running (port $pgPort)"
+        return
+    }
+    Start-Service noroset_postgres 2>$null
+    Start-Sleep 1
+    pg_isready.exe -p $pgPort -q 2>$null
+    if ($LASTEXITCODE -eq 0) {
+        Write-Ok "PostgreSQL service started (port $pgPort)"
+        return
+    }
+
     $status = docker inspect --format "{{.State.Status}}" noroset-postgres 2>$null
     if ($LASTEXITCODE -ne 0) { $status = 'missing' }
     $status = $status.Trim()
@@ -89,6 +110,23 @@ function Ensure-TestDb {
     # tests run against <db>_test (see test setup-env) so they never wipe dev data
     $pgUser = if ($env:POSTGRES_USER) { $env:POSTGRES_USER } else { 'noroset' }
     $testDb = "$(if ($env:POSTGRES_DB) { $env:POSTGRES_DB } else { 'noroset' })_test"
+    $pgPort = 5433
+
+    pg_isready.exe -p $pgPort -q 2>$null
+    if ($LASTEXITCODE -eq 0) {
+        $exists = psql.exe -p $pgPort -U $pgUser -d postgres -tAc "SELECT 1 FROM pg_database WHERE datname = '$testDb'" 2>$null
+        if ("$exists".Trim() -eq '1') { Write-Ok "test database $testDb exists"; return }
+        Write-Step "creating test database $testDb..."
+        createdb.exe -p $pgPort -U $pgUser $testDb
+        $migratorPw = if ($env:POSTGRES_MIGRATOR_PASSWORD) { $env:POSTGRES_MIGRATOR_PASSWORD } else { 'noroset_migrator_password' }
+        $appPw = if ($env:POSTGRES_APP_PASSWORD) { $env:POSTGRES_APP_PASSWORD } else { 'noroset_app_password' }
+        $sql = (Get-Content (Join-Path $Root 'packages/db/sql/roles.sql') -Raw).
+            Replace('__MIGRATOR_PASSWORD__', $migratorPw).Replace('__APP_PASSWORD__', $appPw)
+        $sql | psql.exe -q -v ON_ERROR_STOP=1 -p $pgPort -U $pgUser -d $testDb | Out-Null
+        Write-Ok "test database $testDb ready (tests migrate it themselves)"
+        return
+    }
+
     $exists = docker exec noroset-postgres psql -U $pgUser -d postgres -tAc "SELECT 1 FROM pg_database WHERE datname = '$testDb'"
     if ("$exists".Trim() -eq '1') { Write-Ok "test database $testDb exists"; return }
     Write-Step "creating test database $testDb..."
@@ -149,7 +187,7 @@ function Start-DevServer { param([string]$Name, [string]$Filter, [int]$Port, [st
     if (-not (Test-Path $LogDir)) { New-Item -ItemType Directory -Path $LogDir | Out-Null }
     # set PORT explicitly so Next.js/Nest don't auto-increment to a busy port
     $proc = Start-Process -FilePath 'cmd.exe' `
-        -ArgumentList "/c set PORT=$Port && pnpm --filter `"$Filter`" dev" `
+        -ArgumentList "/c set PATH=C:\pgsql\bin;C:\nodejs;C:\git\cmd;%PATH% && set PORT=$Port && pnpm --filter `"$Filter`" dev" `
         -WorkingDirectory $Root `
         -RedirectStandardOutput $LogFile `
         -RedirectStandardError "$LogFile.err" `

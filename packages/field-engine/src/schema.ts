@@ -1,11 +1,12 @@
 import { z } from 'zod';
+import { generateId } from './ids';
 import { ID_PATTERNS } from './ids';
 import { LIMITS } from './limits';
 import { richTextSchema } from './rich-text';
 import { isHttpsUrl } from './text';
 
-// ساختار definition (docs/architecture.md §8.3). این schema فقط ساختار را بررسی می‌کند؛
-// settings هر نوع و قواعد معنایی (§8.5) در validateDefinition با رجیستری‌ها بررسی می‌شوند.
+// ساختار definition (docs/architecture.md §8.3) با معماری ۶ ناحیه‌ای.
+// این schema ساختار داده‌ها را بررسی می‌کند؛ settings هر نوع در validateDefinition بررسی می‌شود.
 
 export const PAGE_KINDS = ['welcome', 'main', 'ending'] as const;
 export const CHROME_AREAS = ['header', 'topBar', 'sidebar', 'bottomBar', 'footer'] as const;
@@ -34,7 +35,6 @@ const backgroundImageUrl = z
   .refine((value) => value === '' || isHttpsUrl(value) || isLocalHttpUrl(value), { message: 'https_only' });
 
 export const conditionSchema = z.strictObject({
-  /** show: فقط وقتی شرط برقرار است نمایش بده؛ hide: وقتی برقرار است پنهان کن (صفحه main رد می‌شود). */
   effect: z.enum(['show', 'hide']),
   field_id: fieldId,
   op: z.enum(CONDITION_OPS),
@@ -47,10 +47,6 @@ export const fieldElementSchema = z.strictObject({
   field_id: fieldId,
   type: elementType,
   label: z.string().trim().min(1).max(LIMITS.maxLabelLength),
-  /**
-   * راهنمای پرسش: متن ساده (فرم‌ها و قالب‌های قبلی) یا متن غنی محدود (پررنگ، کج، لینک https، فهرست)؛
-   * هر دو پذیرفته و همان‌طور ذخیره می‌شوند. متن ساده‌ی هر دو: richTextPlain.
-   */
   description: z.union([z.string().max(2000), richTextSchema]).default(''),
   required: z.boolean().default(false),
   settings: rawSettings,
@@ -65,48 +61,15 @@ export const contentElementSchema = z.strictObject({
   condition: conditionSchema.optional(),
 });
 
-/** chrome شرطی نیست. */
-export const chromeElementSchema = z.strictObject({
-  kind: z.literal('chrome'),
-  item_id: itemId,
-  type: elementType,
-  settings: rawSettings,
-});
-
 export const bodyItemSchema = z.discriminatedUnion('kind', [fieldElementSchema, contentElementSchema]);
-
-const chromeList = z.array(chromeElementSchema).max(LIMITS.maxElementsPerArea);
-
-const pageAreaSchema = z
-  .strictObject({
-    mode: z.enum(['inherit', 'custom', 'hidden']).default('inherit'),
-    elements: chromeList.optional(),
-  })
-  .superRefine((area, ctx) => {
-    if (area.mode === 'custom' && !area.elements) {
-      ctx.addIssue({ code: 'custom', message: 'custom_requires_elements', path: ['elements'] });
-    }
-    if (area.mode !== 'custom' && area.elements) {
-      ctx.addIssue({ code: 'custom', message: 'elements_only_for_custom', path: ['elements'] });
-    }
-  })
-  .prefault({});
 
 export const pageSchema = z.strictObject({
   page_id: pageId,
   kind: z.enum(PAGE_KINDS),
   title: z.string().max(200).default(''),
-  header: pageAreaSchema,
-  topBar: pageAreaSchema,
   body: z.strictObject({ items: z.array(bodyItemSchema).default([]) }).prefault({}),
-  sidebar: pageAreaSchema,
-  bottomBar: pageAreaSchema,
-  footer: pageAreaSchema,
-  /** فقط برای صفحه main مجاز است. */
   condition: conditionSchema.optional(),
 });
-
-const defaultAreaSchema = z.strictObject({ elements: chromeList.default([]) }).prefault({});
 
 const hexColor = z.string().regex(/^#[0-9a-fA-F]{6}$/);
 export const FORM_THEME_PRESETS = [
@@ -123,6 +86,7 @@ export const FORM_THEME_PRESETS = [
   'mono',
   'brutal',
 ] as const;
+export type FormThemePreset = (typeof FORM_THEME_PRESETS)[number];
 export const FORM_THEME_BACKGROUNDS = ['solid', 'gradient', 'mesh', 'image'] as const;
 export const FORM_THEME_BUTTON_STYLES = ['filled', 'outline', 'soft', 'tonal', 'glass', 'shadow'] as const;
 export const FORM_THEME_RADII = ['none', 'md', 'lg', 'full'] as const;
@@ -132,11 +96,10 @@ export const formThemeSchema = z
   .strictObject({
     preset: z.enum(FORM_THEME_PRESETS).default('paper'),
     primary_color: hexColor.default('#4f46e5'),
-    background_color: hexColor.default('#ffffff'),
+    background_color: hexColor.default('#f4f4f5'),
     background_style: z.enum(FORM_THEME_BACKGROUNDS).default('solid'),
     background_secondary_color: hexColor.default('#e8edf5'),
     background_angle: z.int().min(0).max(360).default(135),
-    /** حالت تصویر؛ برای سازگاری، تعریف‌های قدیمی بدون این فیلدها معتبر می‌مانند. */
     background_image_url: backgroundImageUrl.optional(),
     background_pattern_icon: z.string().max(64).optional(),
     background_pattern_size: z.number().min(8).max(200).optional(),
@@ -154,27 +117,89 @@ export const formThemeSchema = z
   })
   .prefault({});
 
+/* ─── اسکیمای نواحی قالب فرم (Defaults) ─── */
+
+export const headerDefaultsSchema = z
+  .object({
+    logo_url: z.string().default(''),
+    brand_title: z.string().default(''),
+    brand_subtitle: z.string().default(''),
+    align: z.enum(['start', 'center', 'end']).default('start'),
+    show_logo: z.boolean().default(true),
+    show_title: z.boolean().default(true),
+    show_subtitle: z.boolean().default(true),
+  })
+  .prefault({});
+
+export const topBarDefaultsSchema = z
+  .object({
+    mode: z.enum(['progress', 'notice', 'none']).default('progress'),
+    description: z.string().default(''),
+    notice_text: z.string().default(''),
+  })
+  .prefault({});
+
+export const sidebarDefaultsSchema = z
+  .object({
+    title: z.string().default('مراحل فرم'),
+  })
+  .prefault({});
+
+export const bottomBarDefaultsSchema = z
+  .object({
+    prev_label: z.string().default('مرحله قبلی'),
+    next_label: z.string().default('مرحله بعدی'),
+    submit_label: z.string().default('ثبت و ارسال'),
+  })
+  .prefault({});
+
+export const footerDefaultsSchema = z
+  .object({
+    text: z.string().default('این فرم با نوروست طراحی شده است.'),
+    show_branding: z.boolean().default(true),
+  })
+  .prefault({});
+
+export const formDefaultsSchema = z
+  .object({
+    header: headerDefaultsSchema,
+    top_bar: topBarDefaultsSchema,
+    sidebar: sidebarDefaultsSchema,
+    bottom_bar: bottomBarDefaultsSchema,
+    footer: footerDefaultsSchema,
+  })
+  .prefault({});
+
+/* ─── اسکیمای چیدمان و وضعیت نواحی (Layout & Zones) ─── */
+
+export const formZonesSchema = z
+  .object({
+    header: z.boolean().default(true),
+    top_bar: z.boolean().default(true),
+    sidebar: z.boolean().default(true),
+    bottom_bar: z.boolean().default(true),
+    footer: z.boolean().default(true),
+  })
+  .prefault({});
+
 export const formLayoutSchema = z
-  .strictObject({
+  .object({
     header_sticky: z.boolean().default(false),
     bottom_bar_fixed: z.boolean().default(true),
     sidebar_collapsible: z.boolean().default(true),
+    sidebar_collapsed: z.boolean().default(false),
+    main_columns: z.union([z.literal(1), z.literal(2)]).default(1),
+    zones: formZonesSchema,
   })
   .prefault({});
+
+/* ─── تعریف کل فرم (FormDefinition) ─── */
 
 export const definitionSchema = z.strictObject({
   version_schema: z.literal(1),
   theme: formThemeSchema,
   layout: formLayoutSchema,
-  defaults: z
-    .strictObject({
-      header: defaultAreaSchema,
-      topBar: defaultAreaSchema,
-      sidebar: defaultAreaSchema,
-      bottomBar: defaultAreaSchema,
-      footer: defaultAreaSchema,
-    })
-    .prefault({}),
+  defaults: formDefaultsSchema,
   pages: z.array(pageSchema).min(1).max(LIMITS.maxPages),
   settings: z.strictObject({ closed_message: z.string().max(1000).default('') }).prefault({}),
   ending: z
@@ -189,12 +214,48 @@ export const definitionSchema = z.strictObject({
     .prefault({}),
 });
 
+const defaultRandom = (max: number) => Math.floor(Math.random() * max);
+
+/** سازنده فرم پیش‌فرض با ساختار تمیز فارسی و معماری ۶ ناحیه‌ای */
+export function createDefaultFormDefinition(options?: {
+  title?: string;
+  generateIdFn?: (kind: 'page' | 'item' | 'field') => string;
+}): FormDefinition {
+  const gen = options?.generateIdFn ?? ((kind) => generateId(kind, defaultRandom));
+  return {
+    version_schema: 1,
+    theme: formThemeSchema.parse({}),
+    layout: formLayoutSchema.parse({}),
+    defaults: formDefaultsSchema.parse({
+      top_bar: {
+        notice_text: 'لطفاً تمامی موارد را با دقت مطالعه و تکمیل فرمایید.',
+      },
+    }),
+    pages: [
+      {
+        page_id: gen('page'),
+        kind: 'main',
+        title: 'صفحه ۱',
+        body: { items: [] },
+      },
+    ],
+    settings: { closed_message: '' },
+    ending: {},
+  };
+}
+
 export type Condition = z.output<typeof conditionSchema>;
 export type FieldElement = z.output<typeof fieldElementSchema>;
 export type ContentElement = z.output<typeof contentElementSchema>;
-export type ChromeElement = z.output<typeof chromeElementSchema>;
 export type BodyItem = z.output<typeof bodyItemSchema>;
 export type FormPage = z.output<typeof pageSchema>;
 export type FormTheme = z.output<typeof formThemeSchema>;
+export type HeaderDefaults = z.output<typeof headerDefaultsSchema>;
+export type TopBarDefaults = z.output<typeof topBarDefaultsSchema>;
+export type SidebarDefaults = z.output<typeof sidebarDefaultsSchema>;
+export type BottomBarDefaults = z.output<typeof bottomBarDefaultsSchema>;
+export type FooterDefaults = z.output<typeof footerDefaultsSchema>;
+export type FormDefaults = z.output<typeof formDefaultsSchema>;
+export type FormZones = z.output<typeof formZonesSchema>;
 export type FormLayout = z.output<typeof formLayoutSchema>;
 export type FormDefinition = z.output<typeof definitionSchema>;

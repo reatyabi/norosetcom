@@ -1,4 +1,4 @@
-import { elapsedTimerChrome, formNameChrome, licenseBadgeChrome, logoTitleChrome, pageNumberChrome, progressTimelineChrome } from './chrome/simple';
+import { licenseBadgeChrome } from './chrome/simple';
 import { navButtonsChrome } from './chrome/nav-buttons';
 import { imageContent } from './content/image';
 import { textContent } from './content/text';
@@ -44,11 +44,6 @@ export const contentTypes: ReadonlyMap<string, ContentType> = buildRegistry<Cont
 ]);
 
 export const chromeTypes: ReadonlyMap<string, ChromeType> = buildRegistry<ChromeType>([
-  logoTitleChrome,
-  pageNumberChrome,
-  progressTimelineChrome,
   navButtonsChrome,
-  formNameChrome,
-  elapsedTimerChrome,
   licenseBadgeChrome,
 ]);

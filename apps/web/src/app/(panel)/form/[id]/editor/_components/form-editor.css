@@ -43,3 +43,249 @@
   color: var(--muted-foreground);
   opacity: 0.7;
 }
+
+/* ==========================================================================
+   توکن‌های ادیتور فرم نوروفرم (NoroForm Editor Tokens)
+   (کلاس‌های Tailwind v4 در globals.css ثبت شده‌اند)
+   ========================================================================== */
+
+/* بلوک توکن‌های اسکوپ‌شده بوم فرم — متصل به مقادیر واقعی globals.css */
+[data-nf-canvas] {
+  --nf-canvas-bg: var(--muted);
+  --nf-card-bg: var(--card, #ffffff);
+  --nf-card-fg: var(--card-foreground);
+  --nf-border: var(--border);
+  --nf-border-hover: var(--input);
+  --nf-border-focus: var(--ring);
+  --nf-primary: var(--primary);
+  --nf-primary-fg: var(--primary-foreground);
+  --nf-primary-soft: color-mix(in srgb, var(--nf-primary) 15%, transparent);
+  --nf-muted: var(--muted);
+  --nf-muted-fg: var(--muted-foreground);
+  --nf-destructive: var(--destructive);
+  --nf-ring: var(--ring);
+  --nf-radius-card: 1rem;
+  --nf-radius-control: var(--radius, 0.5rem);
+  --nf-shadow-card: var(--fl-shadow-card, 0 1px 2px rgb(15 23 42 / 0.06));
+  --nf-shadow-actions: var(--fl-shadow-flyout, 0 8px 24px rgb(15 23 42 / 0.12));
+  --nf-transition-timing: var(--ease-fluent, cubic-bezier(0, 0, 0, 1));
+  --nf-transition-duration: var(--motion-fast, 120ms);
+
+  /* توکن‌های کنتراست هوشمند روی بوم (پیش‌فرض / حالت پس‌زمینه تیره) */
+  --nf-on-canvas: #ffffff;
+  --nf-on-canvas-muted: rgb(255 255 255 / 0.7);
+  --nf-on-canvas-border: rgb(255 255 255 / 0.2);
+  --nf-on-canvas-surface: rgb(255 255 255 / 0.1);
+
+  /* فونت و مقیاس متن */
+  font-family: var(--nf-font-family, var(--font-sans));
+  font-size: 1rem;
+}
+
+/* ==========================================================================
+   ناحیه محتوای فرم (TopBar, Sidebar, Main, BottomBar) با مقیاس یکپارچه
+   (فاصله‌ها، ابعاد کارت‌ها، دکمه‌ها و فونت در همه نواحی به جز هدر و فوتر)
+   ========================================================================== */
+[data-nf-content-area] {
+  --nf-scale-factor: var(--nf-scale, var(--nf-text-scale, 1));
+
+  /* ۱. مقیاس فاصله‌گذاری و ابعاد Tailwind v4 (پدینگ‌ها، مارجین‌ها، گپ‌ها، اندازه دکمه‌ها و کنترل‌ها) */
+  --spacing: calc(0.25rem * var(--nf-scale-factor));
+
+  /* ۲. مقیاس کامل تایپوگرافی Tailwind v4 برای متون داخل فرم */
+  --text-xs: calc(0.75rem * var(--nf-scale-factor));
+  --text-xs--line-height: calc(1rem * var(--nf-scale-factor));
+  --text-sm: calc(0.875rem * var(--nf-scale-factor));
+  --text-sm--line-height: calc(1.25rem * var(--nf-scale-factor));
+  --text-base: calc(1rem * var(--nf-scale-factor));
+  --text-base--line-height: calc(1.5rem * var(--nf-scale-factor));
+  --text-lg: calc(1.125rem * var(--nf-scale-factor));
+  --text-lg--line-height: calc(1.75rem * var(--nf-scale-factor));
+  --text-xl: calc(1.25rem * var(--nf-scale-factor));
+  --text-xl--line-height: calc(1.75rem * var(--nf-scale-factor));
+  --text-2xl: calc(1.5rem * var(--nf-scale-factor));
+  --text-2xl--line-height: calc(2rem * var(--nf-scale-factor));
+
+  /* ۳. اندازه پایه فونت محلی */
+  font-size: calc(1rem * var(--nf-scale-factor));
+}
+
+/* کلمپ کردن رادیوس کادرهای چندخطی تا در حالت radius: full به شکل کپسول اغراق‌آمیز درنیایند */
+[data-nf-canvas] .nf-control-multiline {
+  border-radius: min(var(--nf-radius-control, 0.5rem), 1.25rem) !important;
+}
+
+/* حالت پس‌زمینه تیره فرم */
+[data-nf-canvas][data-canvas-contrast="dark"] {
+  --nf-on-canvas: #ffffff;
+  --nf-on-canvas-muted: rgb(255 255 255 / 0.7);
+  --nf-on-canvas-border: rgb(255 255 255 / 0.2);
+  --nf-on-canvas-surface: rgb(255 255 255 / 0.1);
+}
+
+/* حالت پس‌زمینه روشن فرم */
+[data-nf-canvas][data-canvas-contrast="light"] {
+  --nf-on-canvas: var(--foreground);
+  --nf-on-canvas-muted: var(--muted-foreground);
+  --nf-on-canvas-border: var(--border);
+  --nf-on-canvas-surface: color-mix(in oklab, var(--muted) 60%, transparent);
+}
+
+/* اعمال سایه و گردی کارت‌های بوم از روی توکن‌های مرکزی تم */
+[data-nf-canvas] .rounded-nf-card {
+  border-radius: var(--nf-radius-card);
+  box-shadow: var(--nf-shadow-card);
+}
+
+/* ==========================================================================
+   استایل‌های دکمه اصلی بر اساس button_style تم
+   ========================================================================== */
+
+/* حالت پیش‌فرض / پر (filled) */
+[data-nf-canvas] .nf-btn-primary,
+[data-nf-canvas][data-button-style="filled"] .nf-btn-primary {
+  background-color: var(--nf-primary);
+  color: var(--nf-primary-fg);
+  border: 1px solid var(--nf-primary);
+  box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+}
+
+/* دکمه خطی (outline) */
+[data-nf-canvas][data-button-style="outline"] .nf-btn-primary {
+  background-color: transparent;
+  color: var(--nf-primary);
+  border: 1.5px solid var(--nf-primary);
+  box-shadow: none;
+}
+
+/* دکمه ملایم (soft) */
+[data-nf-canvas][data-button-style="soft"] .nf-btn-primary {
+  background-color: var(--nf-primary-soft, color-mix(in srgb, var(--nf-primary) 15%, transparent));
+  color: var(--nf-primary);
+  border: 1px solid transparent;
+  box-shadow: none;
+}
+
+/* دکمه رنگی ملایم (tonal) */
+[data-nf-canvas][data-button-style="tonal"] .nf-btn-primary {
+  background-color: color-mix(in srgb, var(--nf-primary) 22%, transparent);
+  color: var(--nf-primary);
+  border: 1px solid color-mix(in srgb, var(--nf-primary) 35%, transparent);
+  box-shadow: none;
+}
+
+/* دکمه شیشه‌ای (glass) */
+[data-nf-canvas][data-button-style="glass"] .nf-btn-primary {
+  background-color: color-mix(in srgb, var(--nf-card-bg) 80%, transparent);
+  color: var(--nf-card-fg);
+  border: 1px solid var(--nf-border);
+  backdrop-filter: blur(8px);
+  box-shadow: 0 2px 6px 0 rgb(0 0 0 / 0.05);
+}
+
+/* دکمه سایه‌دار / بروتالیست (shadow) */
+[data-nf-canvas][data-button-style="shadow"] .nf-btn-primary {
+  background-color: var(--nf-primary);
+  color: var(--nf-primary-fg);
+  border: 2px solid var(--nf-border);
+  box-shadow: 3px 3px 0 0 var(--nf-border);
+}
+
+/* ==========================================================================
+   کلاس‌های پایه کامپوننت‌های ادیتور (NoroForm Field Components)
+   ========================================================================== */
+
+/* ۱. کارت فیلد (Field Card Container) - بلاک سبک درون کارت بدنه اصلی */
+.nf-field-card {
+  position: relative;
+  border-radius: var(--nf-radius-control, 0.5rem);
+  background-color: transparent;
+  color: var(--nf-card-fg, var(--card-foreground));
+  border: 1px solid transparent;
+  box-shadow: none;
+  outline: none;
+  transition: border-color var(--nf-transition-duration, 120ms) var(--nf-transition-timing, var(--ease-fluent)),
+              background-color var(--nf-transition-duration, 120ms) var(--nf-transition-timing, var(--ease-fluent)),
+              box-shadow var(--nf-transition-duration, 120ms) var(--nf-transition-timing, var(--ease-fluent));
+}
+
+.nf-field-card:hover {
+  border-color: var(--nf-border, var(--border));
+  background-color: color-mix(in oklab, var(--nf-muted, var(--muted)) 25%, transparent);
+}
+
+/* حالت فعال/فوکوس کارت در field-card.tsx با کلاس‌های Tailwind مدیریت می‌شود */
+
+/* دسکتاپ: فضای کافی برای نوار ابزار شناور با padding-top: 1.25rem */
+@media (min-width: 768px) {
+  .nf-field-card {
+    padding-top: 1.25rem;
+  }
+}
+
+/* ۲. نوار ابزار اکشن‌های فیلد (Field Actions Toolbar) */
+/* موبایل: ردیف مجزا بالای عنوان */
+.nf-field-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.25rem;
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  margin-bottom: 0.5rem;
+  border-bottom: 1px solid color-mix(in oklab, var(--nf-border, var(--border)) 50%, transparent);
+}
+
+/* دسکتاپ: شناور در top: -1rem */
+@media (min-width: 768px) {
+  .nf-field-actions {
+    position: absolute;
+    top: -1rem;
+    inset-inline-end: 0.75rem;
+    width: auto;
+    padding: 0.125rem;
+    margin-bottom: 0;
+    border: 1px solid var(--nf-border, var(--border));
+    border-radius: var(--nf-radius-control, 0.5rem);
+    background-color: var(--popover, var(--card));
+    box-shadow: var(--nf-shadow-actions, 0 8px 24px rgb(15 23 42 / 0.12));
+    z-index: 10;
+  }
+}
+
+/* ۳. ورودی ویرایش درون‌خطی (Inline Edit) */
+.nf-inline-edit {
+  width: 100%;
+  min-width: 0;
+  border: 0;
+  border-bottom: 1px solid transparent;
+  border-radius: 0;
+  background-color: transparent;
+  padding: 0.25rem 0 0.375rem;
+  color: inherit;
+  outline: none;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  transition: border-color var(--nf-transition-duration, 120ms) var(--nf-transition-timing, var(--ease-fluent)),
+              padding-bottom var(--nf-transition-duration, 120ms) var(--nf-transition-timing, var(--ease-fluent));
+}
+
+.nf-inline-edit::placeholder {
+  color: var(--nf-muted-fg, var(--muted-foreground));
+  opacity: 0.7;
+}
+
+.nf-inline-edit:hover {
+  border-bottom-color: color-mix(in oklab, var(--nf-border, var(--border)) 80%, var(--foreground));
+}
+
+.nf-inline-edit:focus,
+.nf-inline-edit:focus-visible {
+  border-bottom: 2px solid var(--nf-primary, var(--primary));
+  padding-bottom: calc(0.375rem - 1px);
+}
+
+.nf-inline-edit[aria-invalid='true'] {
+  border-bottom-color: var(--nf-destructive, var(--destructive));
+}
+

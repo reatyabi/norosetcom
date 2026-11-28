@@ -29,5 +29,11 @@
     "prettier": "3.9.10",
     "typescript": "6.0.3",
     "typescript-eslint": "8.72.0"
+  },
+  "pnpm": {
+    "overrides": {
+      "@angular-devkit/schematics>magic-string": "0.30.21",
+      "@angular-devkit/schematics>ora": "5.4.1"
+    }
   }
 }

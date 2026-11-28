@@ -11,7 +11,7 @@ import {
   Sheet,
   SheetContent,
   SheetTitle,
-  useIsMobile,
+  useMediaQuery,
   TooltipProvider,
 } from '@noroset/ui';
 import { api, ApiError, errorMessage } from '@/lib/api';
@@ -19,11 +19,11 @@ import { publicFormUrl, routes } from '@/lib/routes';
 import { useTenant } from '../../../session';
 import { canManage } from '../../../session';
 import { type FormSummary } from '../../forms-shared';
-import { type EditorField, type EditorPage, type ElementDef, type HeaderLogo, copyField, fa, makeField, newId, EMPTY_HEADER_LOGO } from './_components/types';
+import { type EditorField, type EditorPage, type ElementDef, copyField, fa, makeField, newId } from './_components/types';
 import { readEditorDocument, writeEditorDocument } from './_components/editor-document';
 import { hoverScroll } from '@/components/editor-ui';
 import { ElementsPanel } from './_components/elements-panel';
-import { ChromeAreas, FieldCard, PageBar, SkeletonFieldCard } from './_components/canvas';
+import { FieldCard, FormCanvas, SkeletonFieldCard } from './_components/canvas';
 import { ConfirmDialog } from './_components/confirm-dialog';
 import { EditorHeader } from './_components/editor-header';
 import { PublishIssues } from './_components/publish-issues';
@@ -34,6 +34,18 @@ import { ElementPreview, FormPreview } from './_components/dialogs';
 import { PublishDialog, type PublishSettings } from './_components/publish-dialog';
 import { HeaderEditor } from './_components/header-editor';
 import { EditorBackground } from './_components/editor-background';
+import {
+  formDefaultsSchema,
+  formLayoutSchema,
+  type FormDefaults,
+  type FormLayout,
+  type FormZones,
+  type HeaderDefaults,
+  type TopBarDefaults,
+  type SidebarDefaults,
+  type BottomBarDefaults,
+  type FooterDefaults,
+} from '@noroset/field-engine';
 import { DEFAULT_FORM_THEME } from '@noroset/noroform/ui';
 import type { FormTheme } from '@noroset/field-engine';
 import type { DefinitionIssue } from '@noroset/field-engine';
@@ -55,27 +67,6 @@ const initialPages = (): EditorPage[] => [makePage('صفحه ۱')];
 const scrollBehavior = (): ScrollBehavior =>
   typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth';
 
-/** تعداد المان‌های مؤثر هر ناحیه‌ی chrome (custom/hidden/inherit) را از تعریف خام می‌خواند. */
-function areaElementCount(
-  definition: Record<string, unknown>,
-  page: Record<string, unknown>,
-  area: 'topBar' | 'sidebar' | 'bottomBar' | 'footer',
-): number {
-  const count = (value: unknown): number =>
-    typeof value === 'object' && value !== null && Array.isArray((value as { elements?: unknown }).elements)
-      ? ((value as { elements: unknown[] }).elements.length)
-      : 0;
-  const pageArea = page[area];
-  if (typeof pageArea === 'object' && pageArea !== null) {
-    const mode = (pageArea as { mode?: unknown }).mode;
-    if (mode === 'hidden') return 0;
-    if (mode === 'custom') return count(pageArea);
-  }
-  const defaults = definition.defaults;
-  if (typeof defaults !== 'object' || defaults === null) return 0;
-  return count((defaults as Record<string, unknown>)[area]);
-}
-
 export default function FormEditorPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const tenant = useTenant();
@@ -90,13 +81,13 @@ export default function FormEditorPage({ params }: { params: Promise<{ id: strin
   const [drawer, setDrawer] = useState(false);
   const [themeOpen, setThemeOpen] = useState(false);
   const [elementsOpen, setElementsOpen] = useState(false);
-  const isMobile = useIsMobile();
+  const isCompact = useMediaQuery('max-lg');
   const [preview, setPreview] = useState(false);
   const [elementPreview, setElementPreview] = useState<ElementDef | null>(null);
   const [theme, setTheme] = useState<FormTheme>(DEFAULT_FORM_THEME);
   const [themeDirty, setThemeDirty] = useState(false);
-  const [headerLogo, setHeaderLogo] = useState<HeaderLogo>({ ...EMPTY_HEADER_LOGO });
-  const [headerSticky, setHeaderSticky] = useState(false);
+  const [layout, setLayout] = useState<FormLayout>(() => formLayoutSchema.parse({}));
+  const [defaults, setDefaults] = useState<FormDefaults>(() => formDefaultsSchema.parse({}));
   const [publishing, setPublishing] = useState(false);
   const [publishOpen, setPublishOpen] = useState(false);
   const [publishError, setPublishError] = useState<string | null>(null);
@@ -149,13 +140,16 @@ export default function FormEditorPage({ params }: { params: Promise<{ id: strin
         setPages(document.pages);
         setPageId(firstPage.id);
         setTheme(document.theme);
-        const loadedHeader = document.headerLogo;
-        setHeaderLogo({
-          ...loadedHeader,
-          title: loadedHeader.title.trim() ? loadedHeader.title : tenant.name,
-          subtitle: loadedHeader.subtitle.trim() ? loadedHeader.subtitle : tenant.name,
+        setLayout(document.layout);
+        const loadedHeader = document.defaults.header;
+        setDefaults({
+          ...document.defaults,
+          header: {
+            ...loadedHeader,
+            brand_title: loadedHeader.brand_title?.trim() ? loadedHeader.brand_title : tenant.name,
+            brand_subtitle: loadedHeader.brand_subtitle?.trim() ? loadedHeader.brand_subtitle : tenant.name,
+          },
         });
-        setHeaderSticky(document.headerSticky);
         setThemeDirty(false);
         setSaveState('saved');
         setSaveError(null);
@@ -172,7 +166,14 @@ export default function FormEditorPage({ params }: { params: Promise<{ id: strin
   const documentLoaded = loadedKey === editorKey;
   useEffect(() => {
     if (!documentLoaded) return;
-    const draftDefinition = writeEditorDocument(source, pages, theme, themeDirty, headerLogo, headerSticky);
+    const draftDefinition = writeEditorDocument(
+      source,
+      pages,
+      theme,
+      themeDirty,
+      layout,
+      defaults,
+    );
     const snapshot = JSON.stringify(draftDefinition);
     if (snapshot === savedSnapshot.current) return;
 
@@ -205,7 +206,35 @@ export default function FormEditorPage({ params }: { params: Promise<{ id: strin
         });
     }, 700);
     return () => window.clearTimeout(timer);
-  }, [documentLoaded, headerLogo, headerSticky, id, pages, saveRetry, source, tenant.tenantId, theme, themeDirty]);
+  }, [documentLoaded, id, layout, defaults, pages, saveRetry, source, tenant.tenantId, theme, themeDirty]);
+
+  const updateLayout = (patch: Partial<FormLayout>) => {
+    setLayout((prev) => ({ ...prev, ...patch }));
+  };
+
+  const updateZones = (patch: Partial<FormZones>) => {
+    setLayout((prev) => ({ ...prev, zones: { ...prev.zones, ...patch } }));
+  };
+
+  const updateDefaults = (patch: Partial<FormDefaults>) => {
+    setDefaults((prev) => ({ ...prev, ...patch }));
+  };
+
+  const updateTopBarDefaults = (patch: Partial<TopBarDefaults>) => {
+    setDefaults((prev) => ({ ...prev, top_bar: { ...prev.top_bar, ...patch } }));
+  };
+
+  const updateSidebarDefaults = (patch: Partial<SidebarDefaults>) => {
+    setDefaults((prev) => ({ ...prev, sidebar: { ...prev.sidebar, ...patch } }));
+  };
+
+  const updateBottomBarDefaults = (patch: Partial<BottomBarDefaults>) => {
+    setDefaults((prev) => ({ ...prev, bottom_bar: { ...prev.bottom_bar, ...patch } }));
+  };
+
+  const updateFooterDefaults = (patch: Partial<FooterDefaults>) => {
+    setDefaults((prev) => ({ ...prev, footer: { ...prev.footer, ...patch } }));
+  };
 
   const saveTitle = () => {
     if (!form) return;
@@ -282,7 +311,8 @@ export default function FormEditorPage({ params }: { params: Promise<{ id: strin
     setThemeDirty(true);
   };
 
-  const changeHeaderLogo = (patch: Partial<HeaderLogo>) => setHeaderLogo((prev) => ({ ...prev, ...patch }));
+  const updateHeaderDefaults = (patch: Partial<HeaderDefaults>) =>
+    setDefaults((prev) => ({ ...prev, header: { ...prev.header, ...patch } }));
 
   const saveLabel = {
     saved: 'پیش‌نویس ذخیره شد',
@@ -467,7 +497,7 @@ export default function FormEditorPage({ params }: { params: Promise<{ id: strin
 
   return (
     <TooltipProvider>
-      <div className="flex min-h-0 flex-1 flex-col gap-2 p-2 md:gap-3 md:p-3">
+      <div className="flex h-dvh min-h-0 flex-1 flex-col overflow-hidden bg-background">
 
         {/* ─── هدر ویرایشگر ─── */}
         <EditorHeader
@@ -478,6 +508,7 @@ export default function FormEditorPage({ params }: { params: Promise<{ id: strin
           saveState={saveState}
           saveLabel={saveLabel}
           saveError={saveError}
+          onOpenElements={() => setElementsOpen(true)}
           onDraftChange={(value) => {
             setTitleDraft(value);
             if (titleState === 'error') setTitleState('idle');
@@ -492,28 +523,29 @@ export default function FormEditorPage({ params }: { params: Promise<{ id: strin
                 aria-label="قالب"
                 aria-pressed={themeOpen}
                 className={cn(
-                  'h-10 gap-2 px-3.5 [&_svg]:size-[18px] max-md:size-10 max-md:border-transparent max-md:bg-transparent max-md:px-0 max-md:shadow-none max-md:hover:bg-muted',
-                  themeOpen && 'md:bg-muted',
+                  'py-1.5 px-2 sm:px-3 gap-1.5 text-xs font-semibold [&_svg]:size-3.5',
+                  themeOpen && 'bg-muted',
                 )}
                 onClick={() => setThemeOpen((v) => !v)}
               >
                 <PaletteIcon />
-                <span className="max-md:hidden">قالب</span>
+                <span className="hidden sm:inline">قالب</span>
               </Button>
               <Button
                 variant="secondary"
                 aria-label="پیش‌نمایش"
-                className="max-md:size-10 max-md:border-transparent max-md:bg-transparent max-md:px-0 max-md:shadow-none max-md:hover:bg-muted"
+                className="py-1.5 px-2 sm:px-3 gap-1.5 text-xs font-semibold [&_svg]:size-3.5"
                 onClick={() => setPreview(true)}
               >
                 <EyeIcon />
-                <span className="max-md:hidden">پیش‌نمایش</span>
+                <span className="hidden sm:inline">پیش‌نمایش</span>
               </Button>
 
               {canManage(tenant.role) && (
                 <Button
                   disabled={publishBlockedReason !== null}
                   title={publishBlockedReason ?? undefined}
+                  className="py-1.5 px-2.5 sm:px-4 gap-1.5 text-xs font-semibold shrink-0"
                   onClick={() => setPublishOpen(true)}
                 >
                   {publishing ? 'در حال انتشار…' : form?.status === 'published' ? 'انتشار تغییرات' : 'انتشار'}
@@ -524,11 +556,12 @@ export default function FormEditorPage({ params }: { params: Promise<{ id: strin
         />
 
         {/* ─── بدنه‌ی اصلی ─── */}
-        {publishError && (
-          <Alert variant="destructive">
-            <AlertDescription>{publishError}</AlertDescription>
-          </Alert>
-        )}
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden gap-2 p-2 md:gap-3 md:p-3">
+          {publishError && (
+            <Alert variant="destructive">
+              <AlertDescription>{publishError}</AlertDescription>
+            </Alert>
+          )}
         {publishIssues && publishIssues.length > 0 && (
           <PublishIssues issues={publishIssues} pages={pages} onFocusIssue={focusIssue} />
         )}
@@ -542,9 +575,9 @@ export default function FormEditorPage({ params }: { params: Promise<{ id: strin
           </Alert>
         )}
         <div className="relative flex min-h-0 flex-1 gap-3">
-          {/* سایدبار المان‌ها */}
+          {/* سایدبار المان‌ها (در دسکتاپ ثابت، در تبلت و موبایل مخفی) */}
           <ElementsPanel
-            className="max-md:hidden"
+            className="max-lg:hidden"
             loading={loading}
             onAdd={addField}
             onPreview={setElementPreview}
@@ -553,80 +586,71 @@ export default function FormEditorPage({ params }: { params: Promise<{ id: strin
           {/* بوم طراحی (بوم داخل main پوسته است؛ main تودرتو مجاز نیست) */}
           <section aria-label="بوم فرم" className="relative flex min-w-0 flex-1 flex-col overflow-hidden rounded-xl">
             <EditorBackground theme={theme} />
-            <ScrollArea className={cn('relative z-10 min-h-0 flex-1', hoverScroll)}>
-              {/* با دیالوگ باز، فضای خالی پایین تا کارت‌های آخر هم بالای دیالوگ قابل‌دیدن باشند. */}
-              <div
-                className={cn(
-                  'mx-auto flex max-w-180 flex-col gap-4 px-2 pt-1',
-                  // موبایل: دکمه‌ی شناور «افزودن المان» فوتر کارت آخر را نپوشاند.
-                  drawer && activeField ? 'pb-[calc(70svh+1.5rem)] md:pb-[23.5rem]' : 'pb-20 md:pb-6',
-                )}
-              >
-                <PageBar
-                  pages={pages}
-                  activeId={page.id}
-                  onSelect={selectPage}
-                  onAdd={addPage}
-                  onRemove={requestRemovePage}
-                  onDuplicate={duplicatePage}
-                  onRename={renamePageInEditor}
-                />
-
-                {/* هدر فرم */}
+            <FormCanvas
+              theme={theme}
+              header={
                 <HeaderEditor
-                  value={headerLogo}
+                  value={defaults.header}
                   formTitle={title}
-                  sticky={headerSticky}
-                  onStickyChange={setHeaderSticky}
-                  onChange={changeHeaderLogo}
+                  sticky={layout.header_sticky}
+                  onStickyChange={(sticky) => updateLayout({ header_sticky: sticky })}
+                  onChange={updateHeaderDefaults}
                   loading={loading}
                 />
-
-                {/* ناحیه‌های قالب: خواندنی، بدون کنترل بی‌اثر */}
-                <ChromeAreas
-                  areas={[
-                    { label: 'نوار بالا', count: areaElementCount(source, page.source, 'topBar') },
-                    { label: 'نوار کنار', count: areaElementCount(source, page.source, 'sidebar') },
-                    { label: 'نوار پایین', count: areaElementCount(source, page.source, 'bottomBar') },
-                    { label: 'فوتر', count: areaElementCount(source, page.source, 'footer') },
-                  ]}
-                />
-
-                {/* المان‌های صفحه */}
-                <section className="flex flex-col gap-3" aria-label="المان‌های صفحه">
-                  {loading ? (
-                    [0, 1, 2].map((i) => <SkeletonFieldCard key={i} />)
-                  ) : page.fields.length === 0 ? (
-                    <div className="rounded-xl border border-dashed border-foreground/20 bg-card/50 px-4 py-8 text-center">
-                      <p className="text-sm font-medium">هنوز المانی در این صفحه نیست.</p>
-                      <p className="mt-1 text-xs text-muted-foreground">از فهرست المان‌ها یکی را انتخاب کن تا به پایان صفحه اضافه شود.</p>
-                    </div>
-                  ) : (
-                    page.fields.map((f, index) => (
-                      <FieldCard
-                        key={f.id}
-                        field={f}
-                        active={f.id === activeId}
-                        onSelect={() => setActiveId(f.id)}
-                        onDuplicate={() => duplicateField(f.id)}
-                        onRemove={() => requestRemoveField(f)}
-                        onChange={(patch) => patchField(f.id, patch)}
-                        onOpenSettings={() => {
-                          setActiveId(f.id);
-                          setDrawer(true);
-                        }}
-                        onMoveUp={() => moveFieldInPage(f.id, -1)}
-                        onMoveDown={() => moveFieldInPage(f.id, 1)}
-                        canMoveUp={index > 0}
-                        canMoveDown={index < page.fields.length - 1}
-                        onCollapse={() => setActiveId(null)}
-                        settingsOpen={drawer && f.id === activeId}
-                      />
-                    ))
-                  )}
-                </section>
-              </div>
-            </ScrollArea>
+              }
+              formTitle={titleDraft}
+              onTitleChange={(value) => {
+                setTitleDraft(value);
+                if (titleState === 'error') setTitleState('idle');
+              }}
+              onTitleBlur={saveTitle}
+              pages={pages}
+              activePageIndex={pageIndex}
+              activePageId={page.id}
+              onSelectPage={selectPage}
+              onAddPage={addPage}
+              onRemovePage={requestRemovePage}
+              onDuplicatePage={duplicatePage}
+              onRenamePage={renamePageInEditor}
+              layout={layout}
+              defaults={defaults}
+              onLayoutChange={updateLayout}
+              onTopBarChange={updateTopBarDefaults}
+              onSidebarChange={updateSidebarDefaults}
+              onBottomBarChange={updateBottomBarDefaults}
+              drawerOpen={drawer && !!activeField}
+            >
+              {loading ? (
+                [0, 1, 2].map((i) => <SkeletonFieldCard key={i} />)
+              ) : page.fields.length === 0 ? (
+                <div className="rounded-xl border border-dashed border-foreground/20 bg-card/50 px-4 py-8 text-center">
+                  <p className="text-sm font-medium">هنوز المانی در این صفحه نیست.</p>
+                  <p className="mt-1 text-xs text-muted-foreground">از فهرست المان‌ها یکی را انتخاب کن تا به پایان صفحه اضافه شود.</p>
+                </div>
+              ) : (
+                page.fields.map((f, index) => (
+                  <FieldCard
+                    key={f.id}
+                    field={f}
+                    active={f.id === activeId}
+                    onSelect={() => setActiveId(f.id)}
+                    onDuplicate={() => duplicateField(f.id)}
+                    onRemove={() => requestRemoveField(f)}
+                    onChange={(patch) => patchField(f.id, patch)}
+                    onOpenSettings={() => {
+                      setActiveId(f.id);
+                      setDrawer(true);
+                    }}
+                    onMoveUp={() => moveFieldInPage(f.id, -1)}
+                    onMoveDown={() => moveFieldInPage(f.id, 1)}
+                    canMoveUp={index > 0}
+                    canMoveDown={index < page.fields.length - 1}
+                    onCollapse={() => setActiveId(null)}
+                    settingsOpen={drawer && f.id === activeId}
+                  />
+                ))
+              )}
+            </FormCanvas>
 
             {/* دراور تنظیمات پیشرفته */}
             {drawer && activeField && (
@@ -643,7 +667,7 @@ export default function FormEditorPage({ params }: { params: Promise<{ id: strin
 
             {!drawer && (
               <Button
-                className="absolute end-3 bottom-3 z-10 shadow-lg md:hidden"
+                className="absolute end-3 bottom-3 z-10 shadow-lg lg:hidden"
                 disabled={loading}
                 onClick={() => setElementsOpen(true)}
               >
@@ -653,27 +677,30 @@ export default function FormEditorPage({ params }: { params: Promise<{ id: strin
             )}
           </section>
 
-          {/* پنل تم */}
-          {themeOpen && !isMobile && (
+          {/* پنل تم دسکتاپ */}
+          {themeOpen && !isCompact && (
             <ThemePanel
-              className="max-md:hidden max-xl:absolute max-xl:end-0 max-xl:top-0 max-xl:z-20 max-xl:shadow-lg"
+              className="max-lg:hidden max-xl:absolute max-xl:end-0 max-xl:top-0 max-xl:z-20 max-xl:shadow-lg"
               loading={loading}
               tenantId={tenant.tenantId}
               onClose={() => setThemeOpen(false)}
               theme={theme}
               onChange={changeTheme}
+              layout={layout}
+              onLayoutChange={updateLayout}
             />
           )}
         </div>
       </div>
+    </div>
 
-      {/* نمای موبایل: پنل‌ها در Sheet */}
-      <Sheet open={isMobile && elementsOpen} onOpenChange={setElementsOpen}>
+      {/* نمای موبایل و تبلت: پنل‌ها در Sheet */}
+      <Sheet open={isCompact && elementsOpen} onOpenChange={setElementsOpen}>
         {/* بدون SheetTrigger جهت به Sheet نمی‌رسد؛ RTL و لبه‌ی فیزیکی صریح داده می‌شود. */}
-        <SheetContent side="right" dir="rtl" showCloseButton={false} className="w-72 gap-0 p-0">
+        <SheetContent side="right" dir="rtl" showCloseButton={false} className="w-72 sm:w-80 max-w-[85vw] gap-0 p-0">
           <SheetTitle className="sr-only">المان‌ها</SheetTitle>
           <ElementsPanel
-            className="w-full flex-1 rounded-none shadow-none ring-0"
+            className="w-full flex-1 rounded-none shadow-none ring-0 border-0"
             loading={loading}
             onAdd={addField}
             onPreview={(d) => {
@@ -683,23 +710,33 @@ export default function FormEditorPage({ params }: { params: Promise<{ id: strin
           />
         </SheetContent>
       </Sheet>
-      <Sheet open={isMobile && themeOpen} onOpenChange={setThemeOpen}>
-        <SheetContent side="left" dir="rtl" showCloseButton={false} className="w-72 gap-0 p-0">
-          <SheetTitle className="sr-only">تم فرم</SheetTitle>
+      <Sheet open={isCompact && themeOpen} onOpenChange={setThemeOpen}>
+        <SheetContent side="left" dir="rtl" showCloseButton={false} className="w-80 max-w-[85vw] gap-0 p-0">
+          <SheetTitle className="sr-only">قالب فرم</SheetTitle>
           <ThemePanel
-            className="w-full flex-1 self-stretch overflow-y-auto rounded-none shadow-none ring-0"
+            className="w-full flex-1 self-stretch overflow-y-auto rounded-none shadow-none ring-0 border-0"
             loading={loading}
             tenantId={tenant.tenantId}
             onClose={() => setThemeOpen(false)}
             theme={theme}
             onChange={changeTheme}
+            layout={layout}
+            onLayoutChange={updateLayout}
           />
         </SheetContent>
       </Sheet>
 
       {/* دیالوگ‌ها */}
       {preview && (
-        <FormPreview title={title} pages={pages} startPage={pageIndex} theme={theme} onClose={() => setPreview(false)} />
+        <FormPreview
+          title={title}
+          pages={pages}
+          startPage={pageIndex}
+          theme={theme}
+          layout={layout}
+          defaults={defaults}
+          onClose={() => setPreview(false)}
+        />
       )}
       {publishOpen && form ? (
         <PublishDialog

@@ -1,7 +1,7 @@
 import { numberValue } from '../values';
-import { defineField, placeholder } from './shared';
+import { defineField, baseDisplay1 } from './shared';
 
 export const numberField = defineField(numberValue, {
-  display: { placeholder },
+  display: { ...baseDisplay1 },
   conditionOps: ['eq', 'neq', 'gt', 'lt', 'is_empty'],
 });

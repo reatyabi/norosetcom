@@ -21,38 +21,33 @@ import {
   XIcon,
 } from 'lucide-react';
 import { formatJalali, parseIsoDate } from '@noroset/field-engine';
-import type { FormTheme } from '@noroset/field-engine';
+import type { FormDefaults, FormLayout, FormTheme } from '@noroset/field-engine';
+import { resolveFormThemeTokens } from '@noroset/field-engine';
 import { Button, cn, Input, NativeSelect, NativeSelectOption, ScrollArea, Segmented, Textarea } from '@noroset/ui';
 import { hoverScroll, IconAction, Overlay } from '@/components/editor-ui';
+import {
+  NfFieldFrame,
+  NfFieldLabel,
+  NfControlBox,
+  NfChoiceOption,
+  NfRatingStars,
+  NfMediaPlaceholder,
+  NfFieldHelper,
+  NfFieldError,
+  NfMailIcon,
+  NfPhoneIcon,
+  NfHashIcon,
+  NfCalendarIcon,
+  NfImageIcon,
+  NfVideoIcon,
+  NfChevronDownIcon,
+} from '@noroset/noroform/ui';
 import { ELEMENT_INFO } from './data';
+import { EditorBackground } from './editor-background';
 import { RichPreview } from './form-rich-text';
 import { answerErrorText, pageErrors, runPreview, type AnswerError, type RawAnswers } from './preview-run';
 import { isBasicElementType, specsAt } from './settings-spec';
 import { type EditorField, type EditorPage, type ElementDef, fa, makeField, optionsOf } from './types';
-import { backgroundCss, fontCss, radiusCss, textScale } from '@noroset/noroform/ui';
-
-function readableInk(color: string): string {
-  const channels = color.slice(1).match(/.{2}/g)?.map((channel) => Number.parseInt(channel, 16) / 255) ?? [0, 0, 0];
-  const luminance = channels
-    .map((channel) => (channel <= 0.04045 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4))
-    .reduce((sum, channel, index) => sum + channel * [0.2126, 0.7152, 0.0722][index]!, 0);
-  return luminance > 0.179 ? '#111827' : '#ffffff';
-}
-
-function previewButtonStyle(
-  style: FormTheme['button_style'],
-  color: string,
-  ink: string,
-  radius: string,
-): CSSProperties {
-  const base: CSSProperties = { borderRadius: radius, border: `1px solid ${color}` };
-  if (style === 'outline') return { ...base, color, backgroundColor: 'transparent' };
-  if (style === 'soft') return { ...base, color: '#111827', borderColor: `${color}44`, backgroundColor: `${color}1f` };
-  if (style === 'tonal') return { ...base, color: ink, borderColor: `${color}33`, backgroundColor: `${color}29` };
-  if (style === 'glass') return { ...base, color: '#111827', borderColor: 'rgba(255,255,255,.75)', backgroundColor: 'rgba(255,255,255,.78)' };
-  if (style === 'shadow') return { ...base, color: ink, backgroundColor: color, boxShadow: `3px 3px 0 ${ink}` };
-  return { ...base, color: ink, backgroundColor: color };
-}
 
 /* ─── FormPreview ─── */
 
@@ -61,6 +56,8 @@ export function FormPreview({
   pages,
   startPage,
   theme,
+  layout,
+  defaults,
   onClose,
 }: {
   title: string;
@@ -68,6 +65,8 @@ export function FormPreview({
   /** صفحه‌ای که پیش‌نمایش از آن شروع می‌شود (صفحه‌ی باز در ادیتور). */
   startPage: number;
   theme: FormTheme;
+  layout?: FormLayout;
+  defaults?: FormDefaults;
   onClose: () => void;
 }) {
   const titleId = useId();
@@ -77,12 +76,20 @@ export function FormPreview({
   const [errors, setErrors] = useState<Record<string, AnswerError>>({});
   const [done, setDone] = useState(false);
 
+  const zones = layout?.zones ?? {
+    header: true,
+    top_bar: true,
+    sidebar: true,
+    bottom_bar: true,
+    footer: true,
+  };
+  const hasSidebar = Boolean(zones.sidebar && pages.length > 1);
+
   const { visible } = useMemo(() => runPreview(pages, raw), [pages, raw]);
   const page = pages[index] ?? pages[0]!;
   const items = page.fields.filter((f) => visible.has(f.id));
   const isLast = index === pages.length - 1;
-  const accentInk = readableInk(theme.primary_color);
-  const cardRadius = radiusCss(theme.radius);
+  const resolved = resolveFormThemeTokens(theme);
 
   const restart = () => {
     setRaw({});
@@ -146,88 +153,249 @@ export function FormPreview({
         </IconAction>
       </div>
 
-      <ScrollArea className={cn('min-h-0 flex-1', hoverScroll)}>
-        <div className="flex justify-center p-3 md:p-6">
-          <div
-            className={cn(
-              'flex w-full flex-col gap-3',
-              mode === 'desktop' ? 'max-w-160' : 'max-w-94 rounded-[28px] p-2 ring-1 ring-border',
-            )}
-            style={{
-              background: backgroundCss(theme),
-              fontFamily: fontCss(theme.font),
-              fontSize: `${textScale(theme.text_size)}em`,
-              ['--pv-accent' as string]: theme.primary_color,
-            }}
-          >
-            {/* سربرگ فرم با نوار رنگ اصلی (مثل گوگل فرم) */}
-            <div className="overflow-hidden bg-white text-neutral-900 shadow-xs ring-1 ring-black/10" style={{ borderRadius: cardRadius }}>
-              <div className="h-2" style={{ backgroundColor: theme.primary_color }} />
-              <div className="flex flex-col gap-1 px-5 py-4">
-                <h2 className="text-xl font-bold">{title || 'فرم بدون عنوان'}</h2>
-                {pages.length > 1 && !done && (
-                  <div className="mt-2 flex items-center gap-3 text-xs text-muted-foreground">
-                    <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-muted" aria-hidden>
-                      <div
-                        className="h-full rounded-full transition-[width] duration-300 ease-fluent"
-                        style={{ width: `${((index + 1) / pages.length) * 100}%`, backgroundColor: theme.primary_color }}
-                      />
-                    </div>
-                    صفحه‌ی {fa(index + 1)} از {fa(pages.length)}
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {done ? (
-              <div className="flex flex-col items-center gap-2 bg-white px-5 py-10 text-center text-neutral-900 shadow-xs ring-1 ring-black/10" style={{ borderRadius: cardRadius }}>
-                <CircleCheckIcon className="size-10" style={{ color: theme.primary_color }} />
-                <span className="font-semibold">پاسخ شما ثبت شد.</span>
-                <span className="text-sm text-muted-foreground">این پیش‌نمایش است و پاسخی ذخیره نشد.</span>
-                <Button variant="secondary" className="mt-3" onClick={restart}>
-                  <RotateCcwIcon />
-                  شروع دوباره
-                </Button>
-              </div>
-            ) : (
-              <>
-                {items.length === 0 && (
-                  <p className="bg-white px-5 py-6 text-center text-sm text-neutral-600 ring-1 ring-black/10" style={{ borderRadius: cardRadius }}>
-                    در این صفحه با پاسخ‌های فعلی چیزی نمایش داده نمی‌شود.
-                  </p>
-                )}
-                {items.map((f) => (
-                  <div key={f.id} className="px-5 py-4 text-neutral-900 shadow-xs ring-1 ring-black/10" style={{ background: theme.button_style === 'glass' ? 'rgba(255,255,255,.82)' : '#fff', borderRadius: cardRadius }}>
-                    <AnswerItem
-                      field={f}
-                      value={raw[f.fieldId]}
-                      error={errors[f.fieldId]}
-                      color={theme.primary_color}
-                      onChange={(v) => setAnswer(f.fieldId, v)}
+      <div
+        data-nf-canvas=""
+        data-canvas-contrast={resolved.contrast}
+        data-button-style={theme.button_style || 'filled'}
+        className="relative flex min-h-0 flex-1 flex-col overflow-hidden text-nf-on-canvas"
+        style={resolved.cssVars as CSSProperties}
+      >
+        <EditorBackground theme={theme} />
+        <ScrollArea className={cn('relative z-10 min-h-0 flex-1', hoverScroll)}>
+          <div className="flex justify-center p-3 md:p-6">
+            <div
+              className={cn(
+                'flex w-full flex-col gap-4 transition-colors',
+                mode === 'desktop'
+                  ? 'max-w-3xl'
+                  : 'max-w-96 rounded-[28px] border border-border bg-nf-canvas/80 p-3 shadow-xl backdrop-blur-xs',
+              )}
+            >
+              {/* ۱. هدر فرم (در صورت فعال بودن zones.header) */}
+              {zones.header && (defaults?.header?.logo_url || defaults?.header?.brand_title) && (
+                <header
+                  className={cn(
+                    'flex items-center gap-3 py-1 px-1 text-sm text-nf-on-canvas',
+                    defaults?.header?.align === 'center'
+                      ? 'justify-center text-center'
+                      : defaults?.header?.align === 'end'
+                        ? 'justify-end text-end'
+                        : 'justify-start text-start',
+                  )}
+                >
+                  {defaults?.header?.show_logo !== false && defaults?.header?.logo_url && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={defaults.header.logo_url}
+                      alt={defaults.header.brand_title || 'لوگو'}
+                      className="size-8 rounded-lg object-cover ring-1 ring-nf-on-canvas-border"
                     />
+                  )}
+                  <div className="flex flex-col">
+                    {defaults?.header?.show_title !== false && defaults?.header?.brand_title && (
+                      <span className="font-bold text-nf-on-canvas">{defaults.header.brand_title}</span>
+                    )}
+                    {defaults?.header?.show_subtitle !== false && defaults?.header?.brand_subtitle && (
+                      <span className="text-xs text-nf-on-canvas-muted">{defaults.header.brand_subtitle}</span>
+                    )}
                   </div>
-                ))}
-                <div className="flex items-center gap-2 py-1">
-                  <Button
-                    className="hover:opacity-90"
-                    style={previewButtonStyle(theme.button_style, theme.primary_color, accentInk, cardRadius)}
-                    onClick={next}
-                  >
-                    {isLast ? 'ارسال' : 'بعدی'}
-                    {!isLast && <ArrowLeftIcon />}
-                  </Button>
-                  {index > 0 && (
-                    <Button variant="secondary" onClick={() => setIndex((i) => i - 1)}>
-                      <ArrowRightIcon />
-                      قبلی
-                    </Button>
+                </header>
+              )}
+
+              {/* نوار مراحل افقی برای حالت موبایل */}
+              {hasSidebar && (
+                <div className={cn('flex items-center gap-1.5 overflow-x-auto pb-1 text-xs', mode === 'desktop' ? 'md:hidden' : '')}>
+                  {pages.map((p, i) => (
+                    <button
+                      key={p.id}
+                      type="button"
+                      onClick={() => setIndex(i)}
+                      className={cn(
+                        'flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-colors cursor-pointer',
+                        i === index
+                          ? 'bg-nf-primary text-nf-primary-foreground shadow-xs'
+                          : 'bg-nf-card border border-nf-border text-nf-card-foreground hover:bg-nf-muted',
+                      )}
+                    >
+                      <span className="flex size-4 items-center justify-center rounded-full bg-black/10 text-[10px]">{fa(i + 1)}</span>
+                      <span>{p.title.trim() || `صفحه ${fa(i + 1)}`}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {/* ساختار شبکه‌ای دسکتاپ: سایدبار در کنار ستون اصلی با مقیاس محتوا */}
+              <div
+                data-nf-content-area=""
+                className={cn(
+                  'grid items-start gap-4',
+                  hasSidebar && mode === 'desktop' ? 'grid-cols-1 md:grid-cols-[180px_1fr]' : 'grid-cols-1',
+                )}
+              >
+                {/* ۲. سایدبار مراحل در حالت دسکتاپ */}
+                {hasSidebar && mode === 'desktop' && (
+                  <aside className="hidden md:flex flex-col gap-1 rounded-nf-card border border-nf-border bg-nf-card p-3 text-nf-card-foreground shadow-sm">
+                    {defaults?.sidebar?.title && (
+                      <span className="px-2 py-1 text-xs font-bold text-nf-muted-foreground">
+                        {defaults.sidebar.title}
+                      </span>
+                    )}
+                    <nav className="flex flex-col gap-1">
+                      {pages.map((p, i) => (
+                        <button
+                          key={p.id}
+                          type="button"
+                          onClick={() => setIndex(i)}
+                          className={cn(
+                            'flex items-center gap-2 rounded-lg px-2.5 py-2 text-xs font-medium text-right transition-colors cursor-pointer',
+                            i === index
+                              ? 'bg-nf-primary text-nf-primary-foreground shadow-xs'
+                              : 'text-nf-card-foreground hover:bg-nf-muted',
+                          )}
+                        >
+                          <span
+                            className={cn(
+                              'flex size-5 shrink-0 items-center justify-center rounded-full text-[11px]',
+                              i === index ? 'bg-black/15 text-inherit' : 'bg-nf-muted text-nf-muted-foreground',
+                            )}
+                          >
+                            {fa(i + 1)}
+                          </span>
+                          <span className="truncate">{p.title.trim() || `صفحه ${fa(i + 1)}`}</span>
+                        </button>
+                      ))}
+                    </nav>
+                  </aside>
+                )}
+
+                {/* ستون کارت‌های میانی */}
+                <div className="flex min-w-0 flex-1 flex-col gap-4">
+                  {/* ۳. کارت نوار بالای فرم (TopBar) */}
+                  {zones.top_bar && (
+                    <div className="overflow-hidden rounded-nf-card border border-nf-border bg-nf-card text-nf-card-foreground shadow-xs">
+                      <div className="h-2 bg-nf-primary" />
+                      <div className="flex flex-col gap-1 px-5 py-4">
+                        <h2 className="text-xl font-bold">{title || 'فرم بدون عنوان'}</h2>
+                        {defaults?.top_bar?.description && (
+                          <p className="text-xs text-nf-muted-foreground">{defaults.top_bar.description}</p>
+                        )}
+                        {defaults?.top_bar?.mode === 'notice' && defaults.top_bar.notice_text && (
+                          <div className="mt-2 rounded-lg bg-nf-muted p-2.5 text-xs text-nf-card-foreground">
+                            {defaults.top_bar.notice_text}
+                          </div>
+                        )}
+                        {defaults?.top_bar?.mode !== 'notice' && defaults?.top_bar?.mode !== 'none' && pages.length > 1 && !done && (
+                          <div className="mt-2 flex items-center gap-3 text-xs text-nf-muted-foreground">
+                            <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-nf-muted" aria-hidden>
+                              <div
+                                className="h-full rounded-full bg-nf-primary transition-[width] duration-300 ease-fluent"
+                                style={{ width: `${((index + 1) / pages.length) * 100}%` }}
+                              />
+                            </div>
+                            صفحه‌ی {fa(index + 1)} از {fa(pages.length)}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {done ? (
+                    <div className="flex flex-col items-center gap-2 rounded-nf-card border border-nf-border bg-nf-card px-5 py-10 text-center text-nf-card-foreground shadow-xs">
+                      <CircleCheckIcon className="size-10 text-nf-primary" />
+                      <span className="font-semibold">پاسخ شما ثبت شد.</span>
+                      <span className="text-sm text-muted-foreground">این پیش‌نمایش است و پاسخی ذخیره نشد.</span>
+                      <Button variant="secondary" className="mt-3" onClick={restart}>
+                        <RotateCcwIcon />
+                        شروع دوباره
+                      </Button>
+                    </div>
+                  ) : (
+                    <>
+                      {/* ۴. کارت واحد بدنه اصلی */}
+                      <div
+                        id="pv-zone-main"
+                        className="flex flex-col gap-4 rounded-nf-card border border-nf-border bg-nf-card p-4 md:p-6 text-nf-card-foreground shadow-sm"
+                      >
+                        {items.length === 0 ? (
+                          <p className="py-6 text-center text-sm text-nf-muted-foreground">
+                            در این صفحه با پاسخ‌های فعلی چیزی نمایش داده نمی‌شود.
+                          </p>
+                        ) : (
+                          <div
+                            className={cn(
+                              'grid gap-x-5 gap-y-5',
+                              (layout?.main_columns ?? 1) === 2 ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-1',
+                            )}
+                          >
+                            {items.map((f) => {
+                              const isColSpan2 = Number(f.settings?.col_span) === 2;
+                              return (
+                                <div
+                                  key={f.id}
+                                  className={cn(
+                                    'flex flex-col',
+                                    isColSpan2 && 'md:col-span-2',
+                                  )}
+                                >
+                                  <AnswerItem
+                                    field={f}
+                                    value={raw[f.fieldId]}
+                                    error={errors[f.fieldId]}
+                                    color={theme.primary_color}
+                                    onChange={(v) => setAnswer(f.fieldId, v)}
+                                  />
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* ۵. نوار دکمه‌های پایین فرم */}
+                      {zones.bottom_bar && (
+                        <div
+                          className={cn(
+                            'flex items-center justify-between gap-2 transition-all',
+                            layout?.bottom_bar_fixed
+                              ? 'sticky bottom-3 z-20 backdrop-blur-sm bg-nf-card/95 border border-nf-border shadow-md rounded-nf-card p-3'
+                              : 'rounded-nf-card border border-nf-border bg-nf-card px-4 py-3 shadow-xs',
+                          )}
+                        >
+                          <button
+                            type="button"
+                            className="nf-btn-primary rounded-nf-control font-medium px-4 py-2 text-sm transition-colors cursor-pointer min-w-24 flex items-center justify-center gap-1.5 shadow-xs"
+                            onClick={next}
+                          >
+                            <span>
+                              {isLast
+                                ? defaults?.bottom_bar?.submit_label || 'ارسال'
+                                : defaults?.bottom_bar?.next_label || 'بعدی'}
+                            </span>
+                            {!isLast && <ArrowLeftIcon className="size-4" />}
+                          </button>
+                          {index > 0 && (
+                            <Button variant="secondary" onClick={() => setIndex((i) => i - 1)}>
+                              <ArrowRightIcon />
+                              {defaults?.bottom_bar?.prev_label || 'قبلی'}
+                            </Button>
+                          )}
+                        </div>
+                      )}
+                    </>
                   )}
                 </div>
-              </>
-            )}
+              </div>
+
+              {/* ۶. فوتر فرم */}
+              {zones.footer && (
+                <footer className="w-full shrink-0 py-2 text-center text-xs text-nf-on-canvas-muted opacity-80">
+                  {defaults?.footer?.text || 'این فرم با نوروست طراحی شده است.'}
+                </footer>
+              )}
+            </div>
           </div>
-        </div>
-      </ScrollArea>
+        </ScrollArea>
+      </div>
     </Overlay>
   );
 }
@@ -255,12 +423,27 @@ function AnswerItem({
     if (field.type === 'text') return <RichPreview doc={s.doc} empty="" />;
     if (field.type === 'image') {
       const url = typeof s.url === 'string' && s.url.startsWith('https://') ? s.url : '';
-      // تصویر بیرونی کاربر؛ next/image برای دامنه‌ی ناشناس استفاده نمی‌شود.
-      // eslint-disable-next-line @next/next/no-img-element
-      return url ? <img src={url} alt={String(s.alt ?? '')} className="w-full rounded-lg" /> : <MediaPlaceholder icon={<ImageIcon />} />;
+      if (url) {
+        return (
+          <div className="overflow-hidden rounded-nf-card border border-nf-border bg-nf-muted/20">
+            <img src={url} alt={String(s.alt ?? '')} className="max-h-80 w-full object-contain" />
+            {Boolean(s.alt) && <div className="p-2 text-center text-xs text-nf-muted-foreground">{String(s.alt)}</div>}
+          </div>
+        );
+      }
+      return <NfMediaPlaceholder icon={<NfImageIcon />} label="تصویری انتخاب نشده است" />;
     }
-    // iframe ویدیو فقط در صفحه‌ی عمومی با CSP مخصوص ساخته می‌شود.
-    return <MediaPlaceholder icon={<VideoIcon />} dark={typeof s.provider === 'string'} />;
+    // video
+    if ((s.provider === 'aparat' || s.provider === 'youtube' || s.provider === 'vimeo') && typeof s.video_id === 'string') {
+      return (
+        <div className="flex flex-col items-center justify-center gap-2 rounded-nf-card border border-nf-border bg-nf-muted/25 p-6 text-center text-xs text-nf-muted-foreground">
+          <NfVideoIcon className="size-8 text-nf-primary" />
+          <span className="font-medium text-nf-card-foreground">ویدیوی فرم ({String(s.provider)})</span>
+          <span className="text-[11px] opacity-75">پخش زنده ویدیو در صفحه‌ی عمومی فرم فعال است.</span>
+        </div>
+      );
+    }
+    return <NfMediaPlaceholder icon={<NfVideoIcon />} label="ویدیویی انتخاب نشده است" />;
   }
 
   const common = {
@@ -271,39 +454,70 @@ function AnswerItem({
   const str = typeof value === 'string' ? value : '';
   const placeholder = typeof s.placeholder === 'string' ? s.placeholder : '';
   const options = optionsOf(field);
-  const accent = { accentColor: color };
 
   let control: ReactNode;
   switch (field.type) {
     case 'long_text':
-      control = <Textarea {...common} rows={3} value={str} placeholder={placeholder} onChange={(e) => onChange(e.target.value)} />;
+      control = (
+        <NfControlBox isMultiline isInvalid={Boolean(error)} interactive>
+          <textarea
+            {...common}
+            rows={4}
+            value={str}
+            placeholder={placeholder}
+            onChange={(e) => onChange(e.target.value)}
+            className="w-full min-h-20 bg-transparent text-sm text-nf-card-foreground outline-none resize-none placeholder:text-nf-muted-foreground/60"
+          />
+        </NfControlBox>
+      );
       break;
     case 'date':
       control = (
-        <div className="flex flex-col gap-1">
-          <Input {...common} type="date" dir="ltr" className="w-56 text-right" value={str} onChange={(e) => onChange(e.target.value)} />
-          {str && parseIsoDate(str) && <span className="text-xs text-muted-foreground">{formatJalali(str)}</span>}
+        <div className="flex flex-col gap-1 w-full max-w-xs">
+          <NfControlBox tabularNums icon={<NfCalendarIcon />} isInvalid={Boolean(error)} interactive>
+            <input
+              {...common}
+              type="date"
+              dir="ltr"
+              value={str}
+              onChange={(e) => onChange(e.target.value)}
+              className="w-full bg-transparent text-sm text-nf-card-foreground outline-none text-right placeholder:text-nf-muted-foreground/60"
+            />
+          </NfControlBox>
+          {str && parseIsoDate(str) && (
+            <span className="text-xs text-nf-muted-foreground">{formatJalali(str)}</span>
+          )}
         </div>
       );
       break;
     case 'single_choice':
       control =
         s.display === 'dropdown' ? (
-          <NativeSelect {...common} value={str} onChange={(e) => onChange(e.target.value)}>
-            <NativeSelectOption value="">انتخاب کنید</NativeSelectOption>
-            {options.map((o) => (
-              <NativeSelectOption key={o.value} value={o.value}>
-                {o.label}
-              </NativeSelectOption>
-            ))}
-          </NativeSelect>
+          <NfControlBox icon={<NfChevronDownIcon />} isInvalid={Boolean(error)} interactive>
+            <select
+              {...common}
+              value={str}
+              onChange={(e) => onChange(e.target.value)}
+              className="w-full bg-transparent text-sm text-nf-card-foreground outline-none cursor-pointer"
+            >
+              <option value="" className="bg-nf-card text-nf-card-foreground">انتخاب کنید</option>
+              {options.map((o) => (
+                <option key={o.value} value={o.value} className="bg-nf-card text-nf-card-foreground">
+                  {o.label}
+                </option>
+              ))}
+            </select>
+          </NfControlBox>
         ) : (
           <div role="radiogroup" {...common} tabIndex={-1} className="flex flex-col gap-1 outline-none">
             {options.map((o) => (
-              <label key={o.value} className="flex min-h-9 cursor-pointer items-center gap-3 text-sm">
-                <input type="radio" name={id} className="size-[18px]" style={accent} checked={str === o.value} onChange={() => onChange(o.value)} />
-                {o.label}
-              </label>
+              <NfChoiceOption
+                key={o.value}
+                type="radio"
+                checked={str === o.value}
+                onChange={() => onChange(o.value)}
+                label={o.label}
+              />
             ))}
           </div>
         );
@@ -313,16 +527,19 @@ function AnswerItem({
       control = (
         <div role="group" {...common} tabIndex={-1} className="flex flex-col gap-1 outline-none">
           {options.map((o) => (
-            <label key={o.value} className="flex min-h-9 cursor-pointer items-center gap-3 text-sm">
-              <input
-                type="checkbox"
-                className="size-[18px]"
-                style={accent}
-                checked={picked.includes(o.value)}
-                onChange={(e) => onChange(e.target.checked ? [...picked, o.value] : picked.filter((v) => v !== o.value))}
-              />
-              {o.label}
-            </label>
+            <NfChoiceOption
+              key={o.value}
+              type="checkbox"
+              checked={picked.includes(o.value)}
+              onChange={() =>
+                onChange(
+                  picked.includes(o.value)
+                    ? picked.filter((v) => v !== o.value)
+                    : [...picked, o.value],
+                )
+              }
+              label={o.label}
+            />
           ))}
         </div>
       );
@@ -332,74 +549,76 @@ function AnswerItem({
       const max = typeof s.max === 'number' ? s.max : 5;
       const current = typeof value === 'number' ? value : 0;
       control = (
-        <div role="radiogroup" {...common} tabIndex={-1} className="flex flex-wrap gap-1 outline-none">
-          {Array.from({ length: max }, (_, i) => (
-            <button
-              key={i}
-              type="button"
-              role="radio"
-              aria-checked={current === i + 1}
-              aria-label={`${fa(i + 1)} از ${fa(max)}`}
-              onClick={() => onChange(i + 1)}
-              className="rounded-md p-1 text-muted-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            >
-              <StarIcon className="size-7" style={i < current ? { color, fill: color } : undefined} />
-            </button>
-          ))}
-        </div>
+        <NfRatingStars
+          interactive
+          max={max}
+          value={current}
+          onChange={(rating) => onChange(rating)}
+          color={color}
+        />
       );
       break;
     }
     default: {
       const ltr = field.type === 'email' || field.type === 'phone' || field.type === 'number';
+      const icon =
+        field.type === 'email' ? (
+          <NfMailIcon />
+        ) : field.type === 'phone' ? (
+          <NfPhoneIcon />
+        ) : field.type === 'number' ? (
+          <NfHashIcon />
+        ) : undefined;
+
       control = (
-        <Input
-          {...common}
+        <NfControlBox
           dir={ltr ? 'ltr' : undefined}
-          className={cn(ltr && 'text-right')}
-          inputMode={field.type === 'email' ? 'email' : field.type === 'phone' ? 'tel' : field.type === 'number' ? 'decimal' : undefined}
-          value={str}
-          placeholder={placeholder}
-          onChange={(e) => onChange(e.target.value)}
-        />
+          tabularNums={field.type === 'phone' || field.type === 'number'}
+          icon={icon}
+          isInvalid={Boolean(error)}
+          interactive
+        >
+          <input
+            {...common}
+            dir={ltr ? 'ltr' : undefined}
+            type={field.type === 'email' ? 'email' : 'text'}
+            inputMode={
+              field.type === 'email'
+                ? 'email'
+                : field.type === 'phone'
+                  ? 'tel'
+                  : field.type === 'number'
+                    ? 'decimal'
+                    : undefined
+            }
+            value={str}
+            placeholder={placeholder}
+            onChange={(e) => onChange(e.target.value)}
+            className={cn(
+              'w-full bg-transparent text-sm text-nf-card-foreground outline-none placeholder:text-nf-muted-foreground/60',
+              ltr && 'text-left',
+            )}
+          />
+        </NfControlBox>
       );
     }
   }
 
   return (
-    <div className="flex flex-col gap-2">
-      <div className="flex flex-col gap-0.5">
-        <label htmlFor={id} className="text-[15px] font-medium">
-          {field.label.trim() || 'بدون عنوان'}
-          {field.required && (
-            <span className="text-destructive" aria-label="اجباری">
-              {' '}
-              *
-            </span>
-          )}
-        </label>
-        <RichPreview doc={field.description} empty="" className="text-muted-foreground" />
-      </div>
+    <NfFieldFrame textAlign={s.text_align as 'right' | 'center' | 'left'}>
+      <NfFieldLabel htmlFor={id} label={field.label} required={field.required} />
       {control}
+      {field.description && (
+        <NfFieldHelper>
+          <RichPreview doc={field.description} empty="" />
+        </NfFieldHelper>
+      )}
       {error && (
-        <p id={errorId} className="text-xs text-destructive" role="alert">
+        <NfFieldError id={errorId}>
           {answerErrorText(error)}
-        </p>
+        </NfFieldError>
       )}
-    </div>
-  );
-}
-
-function MediaPlaceholder({ icon, dark }: { icon: ReactNode; dark?: boolean }) {
-  return (
-    <div
-      className={cn(
-        'flex h-32 items-center justify-center rounded-lg [&_svg]:size-6',
-        dark ? 'bg-foreground/85 text-background' : 'bg-muted text-muted-foreground',
-      )}
-    >
-      {icon}
-    </div>
+    </NfFieldFrame>
   );
 }
 

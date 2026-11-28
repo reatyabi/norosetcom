@@ -40,11 +40,11 @@ const displayMobile = '09120000001';
 const password = '12345678';
 const passwordHash = await hashPassword(password);
 
-// اگر کاربر هست دست نمی‌خورد (نشست‌ها، رمز، عضویت‌ها و داده‌ها می‌مانند)
+// در صورت وجود کاربر، رمز عبور بروزرسانی می‌شود
 const res = await client.query(
   `INSERT INTO platform_users (mobile, full_name, password_hash, status)
    VALUES ($1, 'کاربر تست', $2, 'active')
-   ON CONFLICT (mobile) DO UPDATE SET mobile = EXCLUDED.mobile
+   ON CONFLICT (mobile) DO UPDATE SET password_hash = EXCLUDED.password_hash, status = 'active'
    RETURNING id, mobile, status`,
   [mobile, passwordHash]
 );

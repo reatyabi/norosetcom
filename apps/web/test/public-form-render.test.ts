@@ -73,22 +73,9 @@ describe('public form render', () => {
       version_schema: 1,
       defaults: {
         header: {
-          elements: [
-            {
-              kind: 'chrome',
-              item_id: 'i_item0007',
-              type: 'logo_title',
-              settings: {
-                title: 'کسب‌وکار من',
-                subtitle: 'فضای کاری اصلی',
-                logo_url: 'https://example.com/logo.png',
-                align: 'center',
-                show_logo: true,
-                show_title: true,
-                show_subtitle: true,
-              },
-            },
-          ],
+          brand_title: 'کسب‌وکار من',
+          brand_subtitle: 'فضای کاری اصلی',
+          logo_url: 'https://example.com/logo.png',
         },
       },
       pages: [{ page_id: 'p_page0002', kind: 'main', title: '', body: { items: [] } }],
@@ -147,15 +134,22 @@ describe('public form render', () => {
   it('renders the optional top bar, sidebar, and bottom bar in their official areas', () => {
     const withAreas = definitionSchema.parse({
       version_schema: 1,
-      layout: { header_sticky: true, bottom_bar_fixed: false, sidebar_collapsible: false },
+      layout: {
+        header_sticky: true,
+        bottom_bar_fixed: false,
+        sidebar_collapsible: false,
+        zones: { header: true, top_bar: true, sidebar: true, bottom_bar: true, footer: true },
+      },
+      defaults: {
+        top_bar: { mode: 'notice', notice_text: 'اعلان تست' },
+        sidebar: { title: 'فهرست بخش‌ها' },
+        bottom_bar: { prev_label: 'قبلی', next_label: 'بعدی', submit_label: 'ثبت' },
+      },
       pages: [
         {
           page_id: 'p_page0002',
           kind: 'main',
           title: '',
-          topBar: { mode: 'custom', elements: [{ kind: 'chrome', item_id: 'i_item0004', type: 'form_name', settings: {} }] },
-          sidebar: { mode: 'custom', elements: [{ kind: 'chrome', item_id: 'i_item0005', type: 'page_number', settings: {} }] },
-          bottomBar: { mode: 'custom', elements: [{ kind: 'chrome', item_id: 'i_item0006', type: 'nav_buttons', settings: {} }] },
           body: { items: [] },
         },
       ],

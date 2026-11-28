@@ -94,7 +94,7 @@ describe('issueTarget', () => {
 
   it('returns null for paths that are not inside pages', () => {
     expect(issueTarget([], pages)).toBeNull();
-    expect(issueTarget(['defaults', 'header', 'elements', 0], pages)).toBeNull();
+    expect(issueTarget(['defaults', 'header', 'brand_title'], pages)).toBeNull();
     expect(issueTarget(['theme', 'primary_color'], pages)).toBeNull();
     expect(issueTarget(['pages', 7, 'kind'], pages)).toBeNull();
   });

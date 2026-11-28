@@ -18,7 +18,7 @@ describe('registries', () => {
     );
     expect([...contentTypes.keys()].sort()).toEqual(['image', 'text', 'video']);
     expect([...chromeTypes.keys()].sort()).toEqual(
-      ['elapsed_timer', 'form_name', 'license_badge', 'logo_title', 'nav_buttons', 'page_number', 'progress_timeline'].sort(),
+      ['license_badge', 'nav_buttons'].sort(),
     );
   });
 
@@ -28,9 +28,8 @@ describe('registries', () => {
     }
   });
 
-  it('license_badge is footer-only; elapsed_timer is main-only', () => {
+  it('license_badge is footer-only', () => {
     expect(chromeTypes.get('license_badge')?.allowedAreas).toEqual(['footer']);
-    expect(chromeTypes.get('elapsed_timer')?.allowedPageKinds).toEqual(['main']);
   });
 });
 

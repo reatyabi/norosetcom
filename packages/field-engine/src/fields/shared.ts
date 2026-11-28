@@ -3,8 +3,23 @@ import type { FieldResult, FieldType, JsonValue } from '../contract';
 import type { ConditionOp } from '../schema';
 import { withCheck, type ValueType } from '../values';
 
-/** تنظیم نمایشی مشترک فیلدهای متنی. */
+/** تنظیمات پایه‌ی نمایشی مشترک همه‌ی فیلدها */
+export const colSpan1 = z.union([z.literal(1), z.literal(2)]).default(1);
+export const colSpan2 = z.union([z.literal(1), z.literal(2)]).default(2);
+export const textAlign = z.enum(['right', 'center', 'left']).default('right');
 export const placeholder = z.string().max(200).default('');
+
+export const baseDisplay1 = {
+  col_span: colSpan1,
+  text_align: textAlign,
+  placeholder,
+};
+
+export const baseDisplay2 = {
+  col_span: colSpan2,
+  text_align: textAlign,
+  placeholder,
+};
 
 /**
  * فیلد فرم = نوع مقدار + تنظیمات نمایشی + رفتار شرطی. settings ذخیره‌شده تخت می‌ماند

@@ -1,7 +1,7 @@
 import { longTextValue } from '../values';
-import { defineField, placeholder } from './shared';
+import { defineField, baseDisplay2 } from './shared';
 
 export const longTextField = defineField(longTextValue, {
-  display: { placeholder },
+  display: { ...baseDisplay2 },
   conditionOps: ['eq', 'neq', 'contains', 'is_empty'],
 });

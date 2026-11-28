@@ -1,6 +1,33 @@
 import type { ReactElement } from 'react';
-import { contentTypes, fieldTypes, generateId, type ConditionOp, type RichText } from '@noroset/field-engine';
+import {
+  contentTypes,
+  fieldTypes,
+  generateId,
+  type ConditionOp,
+  type RichText,
+  type FormDefinition,
+  type FormLayout,
+  type FormDefaults,
+  type FormZones,
+  type HeaderDefaults,
+  type TopBarDefaults,
+  type SidebarDefaults,
+  type BottomBarDefaults,
+  type FooterDefaults,
+} from '@noroset/field-engine';
 import { isBasicElementType, type BasicElementType } from './settings-spec';
+
+export type {
+  FormDefinition,
+  FormLayout,
+  FormDefaults,
+  FormZones,
+  HeaderDefaults,
+  TopBarDefaults,
+  SidebarDefaults,
+  BottomBarDefaults,
+  FooterDefaults,
+};
 
 export interface ElementDef {
   /** نوع field-engine (short_text، image، …) یا شناسه‌ی المان آماده. */
@@ -43,30 +70,7 @@ export interface EditorPage {
 }
 
 /** چیدمان لوگو در هدر: start = راست (RTL)، center = وسط، end = چپ. */
-export type HeaderAlign = 'start' | 'center' | 'end';
-
-/** المان لوگوی هدر: chrome از نوع logo_title در defaults.header. */
-export interface HeaderLogo {
-  title: string;
-  subtitle: string;
-  logo_url: string;
-  align: HeaderAlign;
-  visible: boolean;
-  show_logo: boolean;
-  show_title: boolean;
-  show_subtitle: boolean;
-}
-
-export const EMPTY_HEADER_LOGO: HeaderLogo = {
-  title: '',
-  subtitle: '',
-  logo_url: '',
-  align: 'start',
-  visible: true,
-  show_logo: true,
-  show_title: true,
-  show_subtitle: true,
-};
+export type HeaderAlign = HeaderDefaults['align'];
 
 const randomInt = (max: number) => Math.floor(Math.random() * max);
 export const newId = (kind: 'page' | 'item' | 'field') => generateId(kind, randomInt);

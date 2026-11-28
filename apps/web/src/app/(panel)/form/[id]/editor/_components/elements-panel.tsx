@@ -92,7 +92,7 @@ export function ElementsPanel({
                       <IconAction
                         label={`پیش‌نمایش ${d.label}`}
                         size="icon-xs"
-                        className="absolute end-1 top-1/2 -translate-y-1/2 bg-card opacity-0 shadow-xs transition-opacity group-hover/tile:opacity-100 focus-visible:opacity-100 max-md:opacity-100"
+                        className="absolute end-1 top-1/2 -translate-y-1/2 bg-card opacity-0 shadow-xs transition-opacity group-hover/tile:opacity-100 focus-visible:opacity-100 max-lg:opacity-100"
                         onClick={() => onPreview(d)}
                       >
                         <EyeIcon />

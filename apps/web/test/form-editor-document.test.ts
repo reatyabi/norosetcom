@@ -148,55 +148,87 @@ describe('form editor document mapping', () => {
     ).toThrow('نوع یکی از المان‌های پیش‌نویس در این نسخه از ادیتور پشتیبانی نمی‌شود.');
   });
 
-  it('reads and writes the header logo (logo_title chrome) without touching other chrome', () => {
+  it('reads and writes header branding defaults and sticky layout cleanly', () => {
     const raw = {
       version_schema: 1,
-      pages: [{ page_id: 'p_aaaaaaaa', kind: 'main', title: '', body: { items: [] } }],
+      layout: {
+        header_sticky: false,
+        bottom_bar_fixed: true,
+        sidebar_collapsible: true,
+        sidebar_collapsed: false,
+        main_columns: 1,
+        zones: { header: true, top_bar: true, sidebar: true, bottom_bar: true, footer: true },
+      },
       defaults: {
         header: {
-          elements: [
-            { kind: 'chrome', item_id: 'i_aaaaaaaa', type: 'form_name', settings: {} },
-            { kind: 'chrome', item_id: 'i_bbbbbbbb', type: 'logo_title', settings: { title: 'نام', logo_url: 'https://example.com/logo.png' } },
-          ],
+          brand_title: 'نام',
+          brand_subtitle: '',
+          logo_url: 'https://example.com/logo.png',
+          align: 'start' as const,
+          show_logo: true,
+          show_title: true,
+          show_subtitle: true,
         },
+        top_bar: { mode: 'progress' as const, description: '', notice_text: '' },
+        sidebar: { title: '' },
+        bottom_bar: { prev_label: 'قبلی', next_label: 'بعدی', submit_label: 'ارسال' },
+        footer: { text: '', show_branding: true },
       },
+      pages: [{ page_id: 'p_aaaaaaaa', kind: 'main', title: '', body: { items: [] } }],
     };
     const editor = readEditorDocument(raw);
-    expect(editor.headerLogo).toEqual({
-      title: 'نام',
-      subtitle: '',
+    expect(editor.defaults?.header).toMatchObject({
+      brand_title: 'نام',
+      brand_subtitle: '',
       logo_url: 'https://example.com/logo.png',
       align: 'start',
-      visible: true,
       show_logo: true,
       show_title: true,
       show_subtitle: true,
     });
-    expect(editor.headerSticky).toBe(false);
+    expect(editor.layout?.header_sticky).toBeFalsy();
 
     // round-trip بدون تغییر
-    expect(writeEditorDocument(editor.source, editor.pages, editor.theme, false, editor.headerLogo)).toEqual(raw);
+    expect(writeEditorDocument(editor.source, editor.pages, editor.theme, false, editor.layout, editor.defaults)).toEqual(raw);
 
-    type Defaults = { header: { elements: Array<Record<string, unknown>> }; layout?: { header_sticky?: boolean } };
-    const updated = writeEditorDocument(editor.source, editor.pages, editor.theme, false, {
-      ...editor.headerLogo,
-      title: 'نام جدید',
+    const updated = writeEditorDocument(editor.source, editor.pages, editor.theme, false, editor.layout, {
+      ...editor.defaults,
+      header: {
+        ...editor.defaults?.header,
+        brand_title: 'نام جدید',
+        logo_url: 'https://example.com/new.png',
+        brand_subtitle: 'زیرعنوان',
+      },
+    });
+    expect((updated.defaults as { header: Record<string, unknown> }).header).toMatchObject({
+      brand_title: 'نام جدید',
+      brand_subtitle: 'زیرعنوان',
       logo_url: 'https://example.com/new.png',
-      subtitle: 'زیرعنوان',
-      align: 'center',
-      show_subtitle: false,
     });
-    const elements = (updated.defaults as Defaults).header.elements;
-    expect(elements).toHaveLength(2);
-    expect(elements.find((e) => e.type === 'logo_title')).toMatchObject({
-      settings: { title: 'نام جدید', subtitle: 'زیرعنوان', logo_url: 'https://example.com/new.png', align: 'center', show_subtitle: false },
+
+    const sticky = writeEditorDocument(
+      editor.source,
+      editor.pages,
+      editor.theme,
+      false,
+      { ...editor.layout, header_sticky: true },
+      editor.defaults,
+    );
+    expect((sticky.layout as { header_sticky?: boolean })?.header_sticky).toBe(true);
+
+    const removed = writeEditorDocument(editor.source, editor.pages, editor.theme, false, editor.layout, {
+      ...editor.defaults,
+      header: {
+        ...editor.defaults.header,
+        brand_title: '',
+        brand_subtitle: '',
+        logo_url: '',
+      },
     });
-    expect(elements.find((e) => e.type === 'form_name')).toMatchObject({ type: 'form_name', item_id: 'i_aaaaaaaa' });
-
-    const sticky = writeEditorDocument(editor.source, editor.pages, editor.theme, false, editor.headerLogo, true);
-    expect((sticky.layout as Defaults['layout'])?.header_sticky).toBe(true);
-
-    const removed = writeEditorDocument(editor.source, editor.pages, editor.theme, false, { ...editor.headerLogo, title: '', subtitle: '', logo_url: '' });
-    expect((removed.defaults as Defaults).header.elements.map((e) => e.type)).toEqual(['form_name']);
+    expect((removed.defaults as { header: Record<string, unknown> }).header).toMatchObject({
+      brand_title: '',
+      brand_subtitle: '',
+      logo_url: '',
+    });
   });
 });

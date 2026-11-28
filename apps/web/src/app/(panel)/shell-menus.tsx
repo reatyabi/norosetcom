@@ -159,7 +159,17 @@ const MODULE_DESC: Record<ModuleKey, string> = {
 };
 
 /** منوی همبرگری پنل: هویت (لینک به حساب کاربری)، فضاهای کاری، سوئیچ محصولات، پشتیبانی بازشو، و خروج. */
-export function ProductNavMenu({ currentProduct, workspace = true }: { currentProduct?: ModuleKey; workspace?: boolean }) {
+export function ProductNavMenu({
+  currentProduct,
+  workspace = true,
+  triggerClassName,
+  iconClassName,
+}: {
+  currentProduct?: ModuleKey;
+  workspace?: boolean;
+  triggerClassName?: string;
+  iconClassName?: string;
+}) {
   const router = useRouter();
   const pathname = usePathname();
   const { me, tenant, setTenant, logout } = useSession();
@@ -178,12 +188,12 @@ export function ProductNavMenu({ currentProduct, workspace = true }: { currentPr
           <Button
             variant="ghost"
             size="icon"
-            className="size-10 shrink-0 rounded-xl text-muted-foreground hover:bg-muted hover:text-foreground"
+            className={cn('size-10 shrink-0 rounded-xl text-muted-foreground hover:bg-muted hover:text-foreground', triggerClassName)}
             aria-label="منوی نوروست"
           />
         }
       >
-        <MenuIcon className="size-5" />
+        <MenuIcon className={cn('size-5', iconClassName)} />
       </DropdownMenuTrigger>
       <DropdownMenuContent
         side="bottom"

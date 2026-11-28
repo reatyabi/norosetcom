@@ -1,12 +1,9 @@
 import type { z } from 'zod';
-import type { ChromeType, ContentType, ElementTypeBase, FieldResult, FieldType, IssueParams, JsonValue } from './contract';
+import type { ContentType, ElementTypeBase, FieldResult, FieldType, IssueParams, JsonValue } from './contract';
 import { LIMITS } from './limits';
-import { chromeTypes, contentTypes, fieldTypes } from './registry';
+import { contentTypes, fieldTypes } from './registry';
 import {
-  CHROME_AREAS,
   definitionSchema,
-  type ChromeArea,
-  type ChromeElement,
   type Condition,
   type FieldElement,
   type FormDefinition,
@@ -30,7 +27,6 @@ export type ValidateDefinitionResult =
 function zodIssues(error: z.ZodError, prefix: IssuePath): DefinitionIssue[] {
   return error.issues.map((i) => ({
     path: [...prefix, ...i.path.map((p) => (typeof p === 'number' ? p : String(p)))],
-    // برای refineهای سفارشی، message همان کد ماشینی است.
     code: i.code === 'custom' ? i.message : i.code,
   }));
 }
@@ -67,16 +63,9 @@ class Checker {
       if (seen[kind].has(id)) this.add(path, `duplicate_${kind}_id`, { id });
       seen[kind].add(id);
     };
-    for (const area of CHROME_AREAS) {
-      this.def.defaults[area].elements.forEach((e, i) =>
-        check('item', e.item_id, ['defaults', area, 'elements', i, 'item_id']),
-      );
-    }
+
     this.def.pages.forEach((page, pi) => {
       check('page', page.page_id, ['pages', pi, 'page_id']);
-      for (const area of CHROME_AREAS) {
-        page[area].elements?.forEach((e, i) => check('item', e.item_id, ['pages', pi, area, 'elements', i, 'item_id']));
-      }
       page.body.items.forEach((item, ii) => {
         const path: IssuePath = ['pages', pi, 'body', 'items', ii];
         check('item', item.item_id, [...path, 'item_id']);
@@ -85,26 +74,9 @@ class Checker {
     });
   }
 
-  chrome(element: ChromeElement, area: ChromeArea, pageKind: FormDefinition['pages'][number]['kind'] | null, path: IssuePath): void {
-    const type: ChromeType | undefined = chromeTypes.get(element.type);
-    if (!type) return this.add([...path, 'type'], 'unknown_type', { type: element.type });
-    if (!type.allowedAreas.includes(area)) this.add(path, 'chrome_area_not_allowed', { type: element.type, area });
-    // پیش‌فرض‌های سطح فرم فقط از نظر ناحیه بررسی می‌شوند؛ در رندر برای صفحات نامجاز حذف می‌شوند.
-    if (pageKind && !type.allowedPageKinds.includes(pageKind)) {
-      this.add(path, 'chrome_page_kind_not_allowed', { type: element.type, page_kind: pageKind });
-    }
-    this.settings(element, type, path);
-  }
-
   elements(): void {
-    for (const area of CHROME_AREAS) {
-      this.def.defaults[area].elements.forEach((e, i) => this.chrome(e, area, null, ['defaults', area, 'elements', i]));
-    }
     let bodyItems = 0;
     this.def.pages.forEach((page, pi) => {
-      for (const area of CHROME_AREAS) {
-        page[area].elements?.forEach((e, i) => this.chrome(e, area, page.kind, ['pages', pi, area, 'elements', i]));
-      }
       if (page.condition && page.kind !== 'main') this.add(['pages', pi, 'condition'], 'condition_only_on_main_page');
       page.body.items.forEach((item, ii) => {
         bodyItems++;
@@ -154,7 +126,6 @@ class Checker {
       if (typeof v !== 'string' && typeof v !== 'number' && typeof v !== 'boolean') {
         return this.add([...path, 'value'], 'invalid_condition_value');
       }
-      // مقدار نرمال‌شده ذخیره می‌شود تا با پاسخ serializeشده مقایسه شود (مثلاً موبایل E.164).
       condition.value = v;
     };
 

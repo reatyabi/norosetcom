@@ -1,2 +1,22 @@
 /* همه‌ی توکن‌ها، پشته‌ی فونت و ریشه‌های @source در @noroset/ui است (packages/ui/src/styles/globals.css). */
 @import '@noroset/ui/globals.css';
+@import './(panel)/form/[id]/editor/_components/form-editor.css';
+
+@theme inline {
+  --color-nf-canvas: var(--nf-canvas-bg);
+  --color-nf-card: var(--nf-card-bg);
+  --color-nf-card-foreground: var(--nf-card-fg);
+  --color-nf-border: var(--nf-border);
+  --color-nf-primary: var(--nf-primary);
+  --color-nf-primary-foreground: var(--nf-primary-fg);
+  --color-nf-muted: var(--nf-muted);
+  --color-nf-muted-foreground: var(--nf-muted-fg);
+  --color-nf-destructive: var(--nf-destructive);
+  --color-nf-on-canvas: var(--nf-on-canvas);
+  --color-nf-on-canvas-muted: var(--nf-on-canvas-muted);
+  --color-nf-on-canvas-border: var(--nf-on-canvas-border);
+  --color-nf-on-canvas-surface: var(--nf-on-canvas-surface);
+  --radius-nf-card: var(--nf-radius-card);
+  --radius-nf-control: var(--nf-radius-control);
+  --ease-fluent: var(--ease-fluent);
+}

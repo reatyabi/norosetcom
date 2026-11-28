@@ -7,8 +7,8 @@
 
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { ChevronLeftIcon, ChevronRightIcon, InfoIcon, TriangleAlertIcon, XIcon } from 'lucide-react';
-import { fieldTypes, formatJalali, parseIsoDate, type ConditionOp } from '@noroset/field-engine';
-import { Button, cn, Input, NativeSelect, NativeSelectOption, ScrollArea, Switch } from '@noroset/ui';
+import { fieldTypes, formatJalali, parseIsoDate, parseVideoUrl, type ConditionOp } from '@noroset/field-engine';
+import { Button, cn, Input, NativeSelect, NativeSelectOption, ScrollArea, Segmented, Switch } from '@noroset/ui';
 import { hoverScroll, IconAction, UnderlineTabs } from '@/components/editor-ui';
 import {
   BUILTIN_VALIDATION,
@@ -19,7 +19,7 @@ import {
 } from './settings-spec';
 import { type EditorCondition, type EditorField, fa, optionsOf } from './types';
 
-type DrawerTab = 'validation' | 'logic';
+type DrawerTab = 'layout' | 'validation' | 'logic';
 
 const defaultsOf = (field: EditorField) =>
   (fieldTypes.get(field.type)?.defaultSettings ?? {}) as Record<string, unknown>;
@@ -60,13 +60,61 @@ export function SettingsDrawer({
   onNext: () => void;
 }) {
   const hasValidation = field.family === 'field';
-  // بدون قید قابل‌تنظیم (ایمیل، موبایل، تک‌انتخابی، امتیاز) تب منطق اول باز می‌شود.
-  const [tab, setTab] = useState<DrawerTab>(hasValidation && specsIn(field.type, 'validation').length > 0 ? 'validation' : 'logic');
+  // انواع محتوا به تب ظاهر می‌روند؛ برای فیلدها بدون قید تب منطق باز می‌شود.
+  const [tab, setTab] = useState<DrawerTab>(
+    field.family === 'content'
+      ? 'layout'
+      : hasValidation && specsIn(field.type, 'validation').length > 0
+        ? 'validation'
+        : 'logic',
+  );
   const rootRef = useRef<HTMLDivElement>(null);
   // فوکوس پس از بستن به همان دکمه‌ای برمی‌گردد که دیالوگ را باز کرد.
   const returnFocus = useRef<HTMLElement | null>(null);
   const vCount = validationCount(field);
   const invalid = settingsIssues(field).length > 0;
+
+  // همگام‌سازی زنده عرض و موقعیت افقی با کارت بدنه اصلی (#zone-main)
+  const [bounds, setBounds] = useState<{ left: number | string; width: number | string }>({
+    left: 0,
+    width: '100%',
+  });
+
+  useEffect(() => {
+    const updateBounds = () => {
+      const el = document.getElementById('zone-main');
+      if (!el) {
+        setBounds({ left: 0, width: '100%' });
+        return;
+      }
+      const rect = el.getBoundingClientRect();
+      if (rect.width > 0) {
+        setBounds({ left: rect.left, width: rect.width });
+      } else {
+        setBounds({ left: 0, width: '100%' });
+      }
+    };
+
+    updateBounds();
+
+    window.addEventListener('resize', updateBounds);
+    window.addEventListener('scroll', updateBounds, true);
+
+    const el = document.getElementById('zone-main');
+    let observer: ResizeObserver | null = null;
+    if (el && typeof ResizeObserver !== 'undefined') {
+      observer = new ResizeObserver(() => {
+        updateBounds();
+      });
+      observer.observe(el);
+    }
+
+    return () => {
+      window.removeEventListener('resize', updateBounds);
+      window.removeEventListener('scroll', updateBounds, true);
+      observer?.disconnect();
+    };
+  }, []);
 
   // فوکوس به دیالوگ می‌رود تا Esc و Tab از همان‌جا کار کنند و با بستن برمی‌گردد.
   useEffect(() => {
@@ -92,9 +140,13 @@ export function SettingsDrawer({
           onClose();
         }
       }}
-      className="absolute inset-x-0 bottom-0 z-20 flex h-[70svh] flex-col rounded-xl bg-popover shadow-lg ring-1 ring-border outline-none animate-in fade-in-0 slide-in-from-bottom-4 duration-250 ease-fluent md:h-90"
+      style={{
+        left: typeof bounds.left === 'number' ? `${bounds.left}px` : bounds.left,
+        width: typeof bounds.width === 'number' ? `${bounds.width}px` : bounds.width,
+      }}
+      className="fixed bottom-0 z-40 flex h-[50dvh] max-h-[50dvh] flex-col rounded-t-nf-card border-t border-x border-border bg-card shadow-lg outline-none animate-in fade-in-0 slide-in-from-bottom-4 duration-250 ease-fluent"
     >
-      <div className="flex items-start gap-2 px-4.5 pt-3.5">
+      <div className="flex shrink-0 items-start gap-2 px-4.5 pt-3.5">
         <div className="flex min-w-0 flex-col">
           <span id="advanced-settings-title" className="text-[15px] font-semibold">
             تنظیمات پیشرفته
@@ -117,10 +169,11 @@ export function SettingsDrawer({
       </div>
 
       <UnderlineTabs
-        className="overflow-x-auto px-4.5 pt-2.5 [scrollbar-width:none]"
+        className="shrink-0 overflow-x-auto px-4.5 pt-2.5 [scrollbar-width:none]"
         value={tab}
         onChange={setTab}
         items={[
+          { value: 'layout' as const, label: 'چیدمان و ظاهر' },
           ...(hasValidation
             ? [{ value: 'validation' as const, label: `اعتبارسنجی${invalid ? ' · خطا' : vCount ? ` · ${fa(vCount)}` : ''}` }]
             : []),
@@ -128,9 +181,11 @@ export function SettingsDrawer({
         ]}
       />
 
-      <ScrollArea className={cn('min-h-0 flex-1', hoverScroll)}>
+      <ScrollArea className={cn('min-h-0 flex-1 overflow-y-auto', hoverScroll)}>
         <div className="px-4.5 py-4">
-          {tab === 'validation' && hasValidation ? (
+          {tab === 'layout' ? (
+            <LayoutTab field={field} onChange={onChange} />
+          ) : tab === 'validation' && hasValidation ? (
             <ValidationTab field={field} onChange={onChange} />
           ) : (
             <LogicTab field={field} previousFields={previousFields} onChange={onChange} />
@@ -138,10 +193,173 @@ export function SettingsDrawer({
         </div>
       </ScrollArea>
 
-      <div className="flex items-center gap-2 border-t px-4.5 py-3">
+      <div className="flex shrink-0 items-center gap-2 border-t border-border px-4.5 py-3">
         <span className="text-xs text-muted-foreground max-md:hidden">تغییرها همان لحظه اعمال می‌شوند.</span>
         <div className="flex-1" />
         <Button onClick={onClose}>تمام</Button>
+      </div>
+    </div>
+  );
+}
+
+function canonicalVideoUrl(provider: string, id: string): string {
+  if (provider === 'youtube') return `https://youtu.be/${id}`;
+  if (provider === 'vimeo') return `https://vimeo.com/${id}`;
+  return `https://www.aparat.com/v/${id}`;
+}
+
+/* ─── چیدمان و ظاهر فیلد ─── */
+
+function LayoutTab({ field, onChange }: { field: EditorField; onChange: (patch: Partial<EditorField>) => void }) {
+  const setKey = (key: string, value: unknown) => {
+    const settings = { ...field.settings };
+    if (value === undefined) delete settings[key];
+    else settings[key] = value;
+    onChange({ settings });
+  };
+  const colSpan = Number(field.settings.col_span) === 2 ? 2 : 1;
+  const textAlign = (field.settings.text_align as 'right' | 'center' | 'left') || 'right';
+  const placeholder = typeof field.settings.placeholder === 'string' ? field.settings.placeholder : '';
+  const supportsPlaceholder =
+    field.type === 'short_text' ||
+    field.type === 'long_text' ||
+    field.type === 'number' ||
+    field.type === 'email' ||
+    field.type === 'phone' ||
+    (field.type === 'single_choice' && field.settings.display === 'dropdown');
+
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div className="flex flex-col gap-1.5">
+          <label className="text-xs font-medium text-nf-card-foreground">عرض فیلد در فرم</label>
+          <Segmented
+            value={String(colSpan)}
+            onChange={(v) => setKey('col_span', Number(v))}
+            items={[
+              { value: '1', label: 'تک ستون (عادی)' },
+              { value: '2', label: 'تمام‌عرض (دو ستون)' },
+            ]}
+          />
+          <span className="text-[11px] text-nf-muted-foreground">در چیدمان دو ستونه بدنه، فیلد می‌تواند کل سطر را بپوشاند.</span>
+        </div>
+
+        <div className="flex flex-col gap-1.5">
+          <label className="text-xs font-medium text-nf-card-foreground">تراز متن فیلد</label>
+          <Segmented
+            value={textAlign}
+            onChange={(v) => setKey('text_align', v)}
+            items={[
+              { value: 'right', label: 'راست' },
+              { value: 'center', label: 'وسط' },
+              { value: 'left', label: 'چپ' },
+            ]}
+          />
+        </div>
+
+        {field.type === 'single_choice' && (
+          <div className="flex flex-col gap-1.5 sm:col-span-2">
+            <label className="text-xs font-medium text-nf-card-foreground">شکل نمایش گزینه‌ها</label>
+            <Segmented
+              value={((field.settings as Record<string, unknown>).display as string) || 'radio'}
+              onChange={(v) => setKey('display', v)}
+              items={[
+                { value: 'radio', label: 'دکمه‌های رادیویی' },
+                { value: 'dropdown', label: 'منوی کشویی (Dropdown)' },
+              ]}
+            />
+          </div>
+        )}
+
+        {field.type === 'rating' && (
+          <div className="flex flex-col gap-1.5 sm:col-span-2">
+            <label className="text-xs font-medium text-nf-card-foreground">تعداد ستاره‌ها (مقیاس امتیاز)</label>
+            <Segmented
+              value={String(field.settings.max ?? 5)}
+              onChange={(v) => setKey('max', Number(v))}
+              items={[3, 4, 5, 7, 10].map((n) => ({ value: String(n), label: `${fa(n)} ستاره` }))}
+            />
+          </div>
+        )}
+
+        {field.type === 'image' && (
+          <div className="flex flex-col gap-3 sm:col-span-2">
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-medium text-nf-card-foreground">نشانی اینترنتی تصویر (URL)</label>
+              <Input
+                dir="ltr"
+                value={typeof field.settings.url === 'string' ? field.settings.url : ''}
+                onChange={(e) => setKey('url', e.target.value.trim())}
+                placeholder="https://example.com/photo.jpg"
+                className="text-xs"
+              />
+              <span className="text-[11px] text-nf-muted-foreground">نشانی تصویر باید با //:https آغاز شود.</span>
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-medium text-nf-card-foreground">متن جایگزین (Alt / کپشن)</label>
+              <Input
+                value={typeof field.settings.alt === 'string' ? field.settings.alt : ''}
+                onChange={(e) => setKey('alt', e.target.value)}
+                placeholder="توضیح مختصر تصویر برای دسترس‌پذیری…"
+                className="text-xs"
+              />
+            </div>
+          </div>
+        )}
+
+        {field.type === 'video' && (
+          <div className="flex flex-col gap-3 sm:col-span-2">
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-medium text-nf-card-foreground">لینک ویدیو (آپارات، یوتیوب یا ویمیو)</label>
+              <Input
+                dir="ltr"
+                value={
+                  typeof field.settings.provider === 'string' && typeof field.settings.video_id === 'string'
+                    ? canonicalVideoUrl(field.settings.provider, field.settings.video_id)
+                    : ''
+                }
+                onChange={(e) => {
+                  const url = e.target.value.trim();
+                  const p = parseVideoUrl(url);
+                  if (p) {
+                    onChange({
+                      settings: {
+                        ...field.settings,
+                        provider: p.provider,
+                        video_id: p.video_id,
+                      },
+                    });
+                  } else if (url === '') {
+                    onChange({
+                      settings: {
+                        ...field.settings,
+                        provider: undefined,
+                        video_id: undefined,
+                      },
+                    });
+                  }
+                }}
+                placeholder="https://www.aparat.com/v/... یا https://youtu.be/..."
+                className="text-xs"
+              />
+              <span className="text-[11px] text-nf-muted-foreground">
+                پشتیبانی خودکار از لینک‌های آپارات، یوتیوب و ویمیو.
+              </span>
+            </div>
+          </div>
+        )}
+
+        {supportsPlaceholder && (
+          <div className="flex flex-col gap-1.5 sm:col-span-2">
+            <label className="text-xs font-medium text-nf-card-foreground">متن نگهدارنده (Placeholder)</label>
+            <Input
+              value={placeholder}
+              onChange={(e) => setKey('placeholder', e.target.value)}
+              placeholder="متن کم‌رنگ پیش‌فرض درون کادر ورودی…"
+              className="text-xs"
+            />
+          </div>
+        )}
       </div>
     </div>
   );

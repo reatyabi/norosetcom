@@ -14,3 +14,4 @@ export {
   type FormBackgroundValue,
   type PatternIconId,
 } from './background';
+export * from './field-primitives';

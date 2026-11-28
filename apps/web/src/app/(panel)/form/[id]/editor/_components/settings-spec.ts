@@ -68,7 +68,23 @@ const FIELD_COMMON: readonly SettingSpec[] = [
 
 const CONDITION = el('condition', 'logic', 'نمایش شرطی', 'condition', 'فقط به فیلدهای قبل از این المان می‌تواند اشاره کند.');
 
+const colSpan = set('col_span', 'appearance', 'عرض ستون', 'select', {
+  choices: [
+    { value: '1', label: 'یک ستون' },
+    { value: '2', label: 'دو ستون (تمام‌عرض)' },
+  ],
+});
+const textAlign = set('text_align', 'appearance', 'چینش متن', 'select', {
+  choices: [
+    { value: 'right', label: 'راست' },
+    { value: 'center', label: 'وسط' },
+    { value: 'left', label: 'چپ' },
+  ],
+});
 const placeholder = set('placeholder', 'appearance', 'متن جای‌نگهدار', 'placeholder');
+
+const baseFieldSettings = [colSpan, textAlign, placeholder] as const;
+
 const lengths = [
   set('min_length', 'validation', 'حداقل طول', 'int', { hint: 'بر حسب نویسه' }),
   set('max_length', 'validation', 'حداکثر طول', 'int', { hint: 'بر حسب نویسه' }),
@@ -76,22 +92,23 @@ const lengths = [
 const options = set('options', 'general', 'گزینه‌ها', 'options');
 
 export const BASIC_ELEMENTS = {
-  short_text: { family: 'field', settings: [placeholder, ...lengths] },
-  long_text: { family: 'field', settings: [placeholder, ...lengths] },
+  short_text: { family: 'field', settings: [...baseFieldSettings, ...lengths] },
+  long_text: { family: 'field', settings: [...baseFieldSettings, ...lengths] },
   number: {
     family: 'field',
     settings: [
-      placeholder,
+      ...baseFieldSettings,
       set('min', 'validation', 'کمترین مقدار', 'number'),
       set('max', 'validation', 'بیشترین مقدار', 'number'),
       set('integer', 'validation', 'فقط عدد صحیح', 'switch'),
     ],
   },
-  email: { family: 'field', settings: [placeholder] },
-  phone: { family: 'field', settings: [placeholder] },
+  email: { family: 'field', settings: [...baseFieldSettings] },
+  phone: { family: 'field', settings: [...baseFieldSettings] },
   single_choice: {
     family: 'field',
     settings: [
+      ...baseFieldSettings,
       options,
       set('display', 'appearance', 'شکل نمایش', 'select', {
         choices: [
@@ -104,6 +121,7 @@ export const BASIC_ELEMENTS = {
   multi_choice: {
     family: 'field',
     settings: [
+      ...baseFieldSettings,
       options,
       set('min_selected', 'validation', 'حداقل انتخاب', 'int'),
       set('max_selected', 'validation', 'حداکثر انتخاب', 'int', { hint: 'خالی = بدون سقف' }),
@@ -112,11 +130,12 @@ export const BASIC_ELEMENTS = {
   date: {
     family: 'field',
     settings: [
+      ...baseFieldSettings,
       set('min', 'validation', 'زودترین تاریخ', 'date'),
       set('max', 'validation', 'دیرترین تاریخ', 'date'),
     ],
   },
-  rating: { family: 'field', settings: [set('max', 'general', 'مقیاس امتیاز', 'scale')] },
+  rating: { family: 'field', settings: [...baseFieldSettings, set('max', 'general', 'مقیاس امتیاز', 'scale')] },
   text: { family: 'content', settings: [set('doc', 'general', 'متن', 'rich_text')] },
   image: {
     family: 'content',
